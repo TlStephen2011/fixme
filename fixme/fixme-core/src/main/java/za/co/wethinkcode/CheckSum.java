@@ -10,4 +10,8 @@ public class CheckSum {
         hash = String.format("%1$3d", checkSum % 256).replace(' ', '0');
         return hash;
     }
+
+    static boolean validateCheckSum(String message, String checkSum) {
+        return checkSum.equals(generateCheckSum(message));
+    }
 }
