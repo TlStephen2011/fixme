@@ -6,10 +6,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="za.co.wethinkcode.fixme.router.Main" level="debug">
-            <AppenderRef ref="Console"/>
-        </Logger>
-        <Root level="WARN">
+        <Root level="INFO">
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>
