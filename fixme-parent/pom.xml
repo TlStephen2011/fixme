@@ -9,7 +9,6 @@
   <packaging>pom</packaging>
 
   <name>fixme-parent</name>
-  <!-- FIXME change it to the project's website -->
   <url>http://fixme.wethinkcode.co.za</url>
 
   <properties>
@@ -17,7 +16,7 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <jdk.version>1.8</jdk.version>
-    <mainClass>za.co.wethinkcode.fixme.market.Main</mainClass>
+    <mainClass>za.co.wethinkcode.fixme.router.Main</mainClass>
   </properties>
 
   <dependencies>
@@ -42,7 +41,7 @@
             <manifest>
               <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
-              <mainClass>za.co.wethinkcode.fixme.market.Main</mainClass>
+              <mainClass>za.co.wethinkcode.fixme.router.Main</mainClass>
             </manifest>
           </archive>
         </configuration>
