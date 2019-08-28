@@ -9,7 +9,7 @@ public class Main
 {
     public static void main( String[] args )
     {
-        Client client = new Client("Market");
+        Client client = new Client("Broker");
         Thread clientThread = new Thread(client);
         clientThread.start();
         try {
