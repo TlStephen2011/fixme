@@ -86,6 +86,7 @@ import za.co.wethinkcode.exceptions.FixMessageException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class FixMessage {
 
@@ -126,10 +127,8 @@ public class FixMessage {
 
   // Invokes on buy or sell messages.
   public FixMessage(
-    String messageType,
     String sourceID,
     String targetID,
-    String brokerOrderID,
     String symbol,
     String buyOrSell,
     String orderAmount
@@ -137,27 +136,25 @@ public class FixMessage {
 
     // TODO: Validate input here.
 
-    this.messageType = messageType;
+    this.messageType = "D";
     this.sourceID = sourceID;
     this.targetID = targetID;
-    this.brokerOrderID = brokerOrderID;
+    this.brokerOrderID = this.generateBrokerOrderID(6);
     this.symbol = symbol;
     this.buyOrSell = buyOrSell;
     this.orderAmount = orderAmount;
     this.messageTimeSent = this.calcGMTTime();
-    this.bodyLength = this.calcBodyLength(messageType);
-    this.fixMessageWithoutChecksum = this.getFixMessageWithoutChecksum(messageType);
-    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum);
 
-    // TODO: Set final fix message here.
+    this.bodyLength = this.calcBodyLength(this.messageType);
+    this.fixMessageWithoutChecksum = this.getFixMessageWithoutChecksum(this.messageType, "|");
+    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum);
+    this.finalFixMessage = this.fixMessageWithoutChecksum + this.checkSum;
   }
 
   // Invokes on execution report messages.
   public FixMessage(
-    String messageType,
     String sourceID,
     String targetID,
-    String marketOrderID,
     String orderStatus,
     String symbol,
     String buyOrSell,
@@ -166,13 +163,28 @@ public class FixMessage {
     String avgFilledPrice
   ) {
 
-    // TODO: Set checksum here.
-    // TODO: Set final fix message here.
+    // TODO: Validate input here.
+
+    this.messageType = "8";
+    this.sourceID = sourceID;
+    this.targetID = targetID;
+    this.marketOrderID = this.generateBrokerOrderID(6);
+    this.orderStatus = orderStatus;
+    this.symbol = symbol;
+    this.buyOrSell = buyOrSell;
+    this.orderAmount = orderAmount;
+    this.filledAmount = filledAmount;
+    this.avgFilledPrice = avgFilledPrice;
+
+    this.bodyLength = this.calcBodyLength(this.messageType);
+    this.fixMessageWithoutChecksum = this.getFixMessageWithoutChecksum(this.messageType, "|");
+    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum);
+    this.finalFixMessage = this.fixMessageWithoutChecksum + this.checkSum;
   }
 
-  public void sendFixMessage() {
+  public String getFixMessage() {
 
-    // TODO: Fill this in, this should take in the socket.
+    return this.finalFixMessage;
   }
 
   private void validateFixInput(
@@ -186,6 +198,28 @@ public class FixMessage {
   ) throws FixMessageException {
 
     // TODO: Implement this.
+  }
+
+  private String generateBrokerOrderID(int digitAmount) {
+
+    final String upperAlpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    String brokerOrderID = "";
+
+    for (int i = 0; i < digitAmount; i++) {
+
+      if (i % 2 == 0) {
+
+        int randomAlphaIndex = ThreadLocalRandom.current().nextInt(0, 25 + 1);
+        brokerOrderID += upperAlpha.charAt(randomAlphaIndex);
+      }
+      else {
+
+        int randomInteger = ThreadLocalRandom.current().nextInt(1, 9 + 1);
+        brokerOrderID += Integer.toString(randomInteger);
+      }
+    }
+
+    return brokerOrderID;
   }
 
   private String calcGMTTime() {
@@ -216,38 +250,57 @@ public class FixMessage {
       return Integer.toString(bodyLength);
     }
 
-    int bodyLength = (3 * 11) + 11 +
+    int bodyLength = (3 * 13) + 2 + 14 +
       this.messageType.length() +
       this.sourceID.length() +
       this.targetID.length() +
       this.messageSeqNum.length() +
-      this.messageTimeSent.length();
-
-    // TODO: Finish this.
+      this.messageTimeSent.length() +
+      this.execID.length() +
+      this.execTransType.length() +
+      this.orderStatus.length() +
+      this.symbol.length() +
+      this.buyOrSell.length() +
+      this.orderAmount.length() +
+      this.filledAmount.length() +
+      this.avgFilledPrice.length();
 
     return Integer.toString(bodyLength);
   }
 
-  private String getFixMessageWithoutChecksum(String messageType) {
+  private String getFixMessageWithoutChecksum(String messageType, String delimiter) {
 
     String header = "";
     String body = "";
 
-    header = "8=" + this.fixVersion + "|" +
-      "9=" + this.bodyLength + "|" +
-      "35=" + this.messageType + "|" +
-      "49=" + this.sourceID + "|" +
-      "56=" + this.targetID + "|" +
-      "34=" + this.messageSeqNum + "|" +
-      "52=" + this.messageTimeSent + "|";
+    header = "8=" + this.fixVersion + delimiter +
+      "9=" + this.bodyLength + delimiter +
+      "35=" + this.messageType + delimiter +
+      "49=" + this.sourceID + delimiter +
+      "56=" + this.targetID + delimiter +
+      "34=" + this.messageSeqNum + delimiter +
+      "52=" + this.messageTimeSent + delimiter;
 
     if (messageType.equals("D")) {
 
-
+      body = "11=" + this.brokerOrderID + delimiter +
+        "21=" + this.orderHandling + delimiter +
+        "55=" + this.symbol + delimiter +
+        "54=" + this.buyOrSell + delimiter +
+        "38=" + this.orderAmount + delimiter +
+        "40=" + this.orderType + delimiter;
     }
     else {
 
-
+      body = "37=" + this.marketOrderID + delimiter +
+        "17=" + this.execID + delimiter +
+        "20=" + this.execTransType + delimiter +
+        "39=" + this.orderStatus + delimiter +
+        "55=" + this.symbol + delimiter +
+        "54=" + this.buyOrSell + delimiter +
+        "38=" + this.orderAmount + delimiter +
+        "14=" + this.filledAmount + delimiter +
+        "6=" + this.avgFilledPrice + delimiter;
     }
 
     return header + body;
