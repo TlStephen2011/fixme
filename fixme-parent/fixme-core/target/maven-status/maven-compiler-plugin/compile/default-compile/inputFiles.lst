@@ -1,0 +1,14 @@
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/exceptions/ChecksumNotEqualException.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/encoders/ActionEncoder.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/messages/Message.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/encoders/ConnectionEncoder.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/Client.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/Checksum.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/messages/MessageType.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/exceptions/ClientNotFoundException.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/decoders/MessageDecoder.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/exceptions/InputEmptyException.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/messages/MessageAction.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/MD5Creator.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/exceptions/InputErrorException.java
+/goinfre/mmbatha/Desktop/mmbatha/Java/fixme/fixme-parent/fixme-core/src/main/java/za/co/wethinkcode/fixme/core/messages/MessageConnectionAccepted.java

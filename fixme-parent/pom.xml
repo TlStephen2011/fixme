@@ -14,10 +14,10 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.7</maven.compiler.source>
-    <maven.compiler.target>1.7</maven.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
     <jdk.version>1.8</jdk.version>
-    <mainClass>za.co.wethinkcode.App</mainClass>
+    <mainClass>za.co.wethinkcode.fixme.market.Main</mainClass>
   </properties>
 
   <dependencies>
@@ -42,7 +42,7 @@
             <manifest>
               <addClasspath>true</addClasspath>
               <classpathPrefix>lib/</classpathPrefix>
-              <mainClass>za.co.wethinkcode.App</mainClass>
+              <mainClass>za.co.wethinkcode.fixme.market.Main</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -66,6 +66,7 @@
     </plugins>
   </build>
   <modules>
+    <module>fixme-core</module>
     <module>fixme-router</module>
     <module>fixme-broker</module>
     <module>fixme-market</module>

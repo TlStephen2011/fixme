@@ -8,7 +8,7 @@
   </parent>
 
   <groupId>za.co.wethinkcode</groupId>
-  <artifactId>fixme-router</artifactId>
+  <artifactId>fixme.router</artifactId>
   <version>1.0-SNAPSHOT</version>
 
   <name>fixme-router</name>
@@ -20,7 +20,7 @@
     <maven.compiler.source>1.7</maven.compiler.source>
     <maven.compiler.target>1.7</maven.compiler.target>
     <jdk.version>1.8</jdk.version>
-    <mainClass>za.co.wethinkcode.App</mainClass>
+    <mainClass>za.co.wethinkcode.fixme.router.Main</mainClass>
   </properties>
 
   <dependencies>
