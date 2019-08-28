@@ -26,54 +26,16 @@ package za.co.wethinkcode;
 // Footer:
 //
 //    10=128|                         (Checksum)
-//
+
+
 // The tags above are all required.
-
-
+//
 // The broker will send either buy or sell messages, the market will simply
 // reply using an execution report.
 //
 // For simplicity, we wont be using SOH (0x1), we'll simply be using the pipe
 // symbol itself.
 //
-// Tag 11, i.e. unique order id, if message type is and order (single), should
-// ideally be unique and random as to protect against fakes, but meh. Tag 11
-// is ClOrdID.
-//
-// Tag 9, i.e. message length, needs to be added last, which means everything
-// else will need to be calculated / computed first. The header obviously needs
-// to get sent first, followed by the body and the footer.
-//
-// Calculating the message length is not difficult as most tag values are of
-// constant length.
-//
-// How the body length is calculated (we're using .length() just in case changes
-// are made). This is for buy or sell messages:
-//
-// 3 + 1 (messageType) + 1 +
-// 3 + 6 (sourceID) + 1 +
-// 3 + 6 (targetID) + 1 +
-// 3 + 1 (messageSeqNum) + 1 +
-// 3 + 21 (messageTimeSent) + 1 +
-//
-// 3 + brokerOrderID.length() + 1 +
-// 3 + 1 (orderHandling) + 1 +
-// 3 + 3 (Symbol) + 1 +
-// 3 + 1 (buyOrSell) + 1 +
-// 3 + orderAmount.length() + 1 +
-// 3 + 1 (orderType) + 1
-//
-// Body length calculation for an execution report (AvgPx == 2, not 3):
-//
-// 3 + 1 (messageType) + 1 +
-// 3 + 6 (sourceID) + 1 +
-// 3 + 6 (targetID) + 1 +
-// 3 + 1 (messageSeqNum) + 1 +
-// 3 + 21 (messageTimeSent) + 1 +
-//
-// 3 + brokerOrderID.length() + 1 +
-// 3
-
 // Supported FIX 4.0 Messages:
 //
 // 1) Single Buy Order.
@@ -83,6 +45,7 @@ package za.co.wethinkcode;
 
 import za.co.wethinkcode.exceptions.FixMessageException;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
@@ -120,9 +83,10 @@ public class FixMessage {
   // This is needed to get calculate the checksum.
   private String fixMessageWithoutChecksum;
 
+  // Fix checksum, i.e. the footer.
   private String checkSum;
 
-  // Final FIX.4.0 message.
+  // Final FIX.4.0 message, this includes the checksum.
   private String finalFixMessage;
 
   // Invokes on buy or sell messages.
@@ -134,7 +98,13 @@ public class FixMessage {
     String orderAmount
   ) throws FixMessageException {
 
-    // TODO: Validate input here.
+    this.validateSingleOrderFixMessage(
+      sourceID,
+      targetID,
+      symbol,
+      buyOrSell,
+      orderAmount
+    );
 
     this.messageType = "D";
     this.sourceID = sourceID;
@@ -147,7 +117,7 @@ public class FixMessage {
 
     this.bodyLength = this.calcBodyLength(this.messageType);
     this.fixMessageWithoutChecksum = this.getFixMessageWithoutChecksum(this.messageType, "|");
-    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum);
+    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum) + "|";
     this.finalFixMessage = this.fixMessageWithoutChecksum + this.checkSum;
   }
 
@@ -161,9 +131,18 @@ public class FixMessage {
     String orderAmount,
     String filledAmount,
     String avgFilledPrice
-  ) {
+  ) throws FixMessageException {
 
-    // TODO: Validate input here.
+    this.validateExecutionReportFixMessage(
+      sourceID,
+      targetID,
+      orderStatus,
+      symbol,
+      buyOrSell,
+      orderAmount,
+      filledAmount,
+      avgFilledPrice
+    );
 
     this.messageType = "8";
     this.sourceID = sourceID;
@@ -175,29 +154,111 @@ public class FixMessage {
     this.orderAmount = orderAmount;
     this.filledAmount = filledAmount;
     this.avgFilledPrice = avgFilledPrice;
+    this.messageTimeSent = this.calcGMTTime();
 
     this.bodyLength = this.calcBodyLength(this.messageType);
     this.fixMessageWithoutChecksum = this.getFixMessageWithoutChecksum(this.messageType, "|");
-    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum);
+    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum) + "|";
     this.finalFixMessage = this.fixMessageWithoutChecksum + this.checkSum;
   }
 
+  // The only public getter.
   public String getFixMessage() {
 
     return this.finalFixMessage;
   }
 
-  private void validateFixInput(
-    String messageType,
+  private void validateSingleOrderFixMessage(
     String sourceID,
     String targetID,
-    String brokerOrderID,
     String symbol,
     String buyOrSell,
     String orderAmount
   ) throws FixMessageException {
 
-    // TODO: Implement this.
+    this.validateID(sourceID, targetID);
+    this.validateSymbol(symbol);
+    this.validateBuyOrSell(buyOrSell);
+    this.validateAmount(orderAmount);
+  }
+
+  private void validateExecutionReportFixMessage(
+    String sourceID,
+    String targetID,
+    String orderStatus,
+    String symbol,
+    String buyOrSell,
+    String orderAmount,
+    String filledAmount,
+    String avgFilledPrice
+  ) throws FixMessageException {
+
+    this.validateID(sourceID, targetID);
+    this.validateOrderStatus(orderStatus);
+    this.validateSymbol(symbol);
+    this.validateBuyOrSell(buyOrSell);
+    this.validateAmount(orderAmount);
+    this.validateAmount(filledAmount);
+    this.validateFilledPrice(avgFilledPrice);
+  }
+
+  private void validateID(String sourceID, String targetID)
+    throws FixMessageException {
+
+    if (sourceID.length() != 6)
+      throw new FixMessageException("Invalid sourceID length, should be 6.");
+
+    if (targetID.length() != 6)
+      throw new FixMessageException("Invalid targetID length, should be 6.");
+  }
+
+  private void validateSymbol(String symbol)
+    throws FixMessageException {
+
+    if (symbol.length() != 3)
+      throw new FixMessageException("Invalid symbol length, should be 3.");
+  }
+
+  private void validateBuyOrSell(String buyOrSell)
+    throws FixMessageException {
+
+    if (!buyOrSell.equals("1") && !buyOrSell.equals("2"))
+      throw new FixMessageException("Invalid buy or sell option," +
+        "buy should be \"1\", sell should be \"2\".");
+  }
+
+  private void validateAmount(String amount)
+      throws FixMessageException {
+
+    try {
+
+      Integer.parseInt(amount);
+    }
+    catch (NumberFormatException e) {
+
+      throw new FixMessageException(e.getMessage());
+    }
+  }
+
+  private void validateOrderStatus(String orderStatus)
+    throws FixMessageException {
+
+    if (!orderStatus.equals("2") && !orderStatus.equals("8"))
+      throw new FixMessageException("Invalid order status option," +
+        "filled should be \"2\", rejected should be \"8\".");
+  }
+
+  private void validateFilledPrice(String avgFilledPrice)
+    throws FixMessageException {
+
+    try {
+
+      Float.parseFloat(avgFilledPrice);
+    }
+    catch (NumberFormatException e) {
+
+      throw new FixMessageException(e.getMessage());
+    }
   }
 
   private String generateBrokerOrderID(int digitAmount) {
