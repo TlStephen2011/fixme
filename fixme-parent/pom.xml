@@ -10,7 +10,7 @@
 
   <name>fixme-parent</name>
   <!-- FIXME change it to the project's website -->
-  <url>http://www.runitandsee.maybe</url>
+  <url>http://fixme.wethinkcode.co.za</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
