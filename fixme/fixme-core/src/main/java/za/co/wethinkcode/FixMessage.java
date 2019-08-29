@@ -117,7 +117,7 @@ public class FixMessage {
 
     this.bodyLength = this.calcBodyLength(this.messageType);
     this.fixMessageWithoutChecksum = this.getFixMessageWithoutChecksum(this.messageType, "|");
-    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum) + "|";
+    this.checkSum = "10=" + CheckSum.generateCheckSum(this.fixMessageWithoutChecksum) + "|";
     this.finalFixMessage = this.fixMessageWithoutChecksum + this.checkSum;
   }
 
@@ -158,7 +158,7 @@ public class FixMessage {
 
     this.bodyLength = this.calcBodyLength(this.messageType);
     this.fixMessageWithoutChecksum = this.getFixMessageWithoutChecksum(this.messageType, "|");
-    this.checkSum = CheckSum.generateCheckSum(this.fixMessageWithoutChecksum) + "|";
+    this.checkSum = "10=" + CheckSum.generateCheckSum(this.fixMessageWithoutChecksum) + "|";
     this.finalFixMessage = this.fixMessageWithoutChecksum + this.checkSum;
   }
 
