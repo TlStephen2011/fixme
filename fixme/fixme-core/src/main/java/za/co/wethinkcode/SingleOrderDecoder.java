@@ -1,6 +1,6 @@
 package za.co.wethinkcode;
 
-// This class doesn't validate and assumes that the string passed in a valid buy
+// This class doesn't validate and assumes that the string passed in is a valid buy
 // or sell single order FIX message.
 
 public class SingleOrderDecoder {

@@ -1,7 +1,7 @@
 package za.co.wethinkcode;
 
-// This class doesn't validate and assumes that the string passed in a valid buy
-// or sell single order FIX message.
+// This class doesn't validate and assumes that the string passed in is a valid
+// execution report FIX message.
 
 public class ExecutionReportDecoder {
 
