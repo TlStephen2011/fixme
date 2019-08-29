@@ -46,8 +46,8 @@ class Capitalizer implements Runnable {
 			Scanner in = new Scanner(socket.getInputStream());
 			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 			while (in.hasNextLine()) {
-				System.out.println("Client said: " + in.nextLine());
 				String line = in.nextLine();
+				System.out.println("Client said: " + line);
 				out.print(line);
 			}
 		} catch (IOException e) {
