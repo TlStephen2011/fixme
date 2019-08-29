@@ -29,7 +29,7 @@ public class App
     			// Send transaction to router
     			b.sendMessage(t);
     			// Handle server response from "market"
-    			b.processResponse();
+    			System.out.println(b.processResponse());
     		} catch (InvalidInputException e) {
     			System.out.println(e.getMessage());
     		}
