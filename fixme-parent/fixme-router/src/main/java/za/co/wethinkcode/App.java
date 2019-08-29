@@ -49,6 +49,7 @@ class BrokersHandler implements Runnable {
 class BrokerHandler implements Runnable {
 	
 	Socket socket = null;
+	String brokerId = null;
 	
 	BrokerHandler(Socket s) {	
 		socket = s;
@@ -63,15 +64,15 @@ class BrokerHandler implements Runnable {
 			Scanner in = new Scanner(socket.getInputStream());
 			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 						
-			String generatedId = IdGenerator.generateId(6);
-			while (!ActiveConnections.idIsAvailable(generatedId)) {
-				generatedId = IdGenerator.generateId(6);
+			brokerId = IdGenerator.generateId(6);
+			while (!ActiveConnections.idIsAvailable(brokerId)) {
+				brokerId = IdGenerator.generateId(6);
 			}
 			
-			System.out.println(socket + " issuing ID " + generatedId);
+			System.out.println(socket + " issuing ID " + brokerId);
 			
-			ActiveConnections.addBroker(generatedId, socket);
-			out.println(generatedId);
+			ActiveConnections.addBroker(brokerId, socket);
+			out.println(brokerId);
 			
 			while (in.hasNextLine()) {
 				String line = in.nextLine();
@@ -83,8 +84,9 @@ class BrokerHandler implements Runnable {
 		} catch (Exception e) {
 			System.out.println("Error: " + e.getMessage());
 		} finally {
-			try {
+			try {				
 				socket.close();
+				ActiveConnections.removeBroker(brokerId);
 			} catch (IOException e) {}
 
 			System.out.println("Socket closed");
@@ -121,5 +123,10 @@ abstract class ActiveConnections {
 	
 	public static String[] getAvailableMarkets() {
 		return markets.keySet().toArray(new String[0]);
+	}
+	
+	//Test method TODO remove
+	public static String[] getAvailableBrokers() {
+		return brokers.keySet().toArray(new String[0]);
 	}
 }
