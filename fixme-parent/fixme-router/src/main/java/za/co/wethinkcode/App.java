@@ -12,11 +12,11 @@ import java.util.concurrent.Executors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import za.co.wethinkcode.helpers.IdGenerator;
+
 public class App 
 {
     private static final Logger logger = LogManager.getLogger(App.class.getName());
-    private static HashMap<String, Socket> brokersConnected = new HashMap<String, Socket>();
-    private static HashMap<String, Socket> marketsConnected = new HashMap<String, Socket>();
     
     public static void main( String[] args )
     {	
@@ -50,7 +50,7 @@ class BrokerHandler implements Runnable {
 	
 	Socket socket = null;
 	
-	BrokerHandler(Socket s) {
+	BrokerHandler(Socket s) {	
 		socket = s;
 	}
 
@@ -62,6 +62,17 @@ class BrokerHandler implements Runnable {
 			@SuppressWarnings("resource")
 			Scanner in = new Scanner(socket.getInputStream());
 			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+						
+			String generatedId = IdGenerator.generateId(6);
+			while (!ActiveConnections.idIsAvailable(generatedId)) {
+				generatedId = IdGenerator.generateId(6);
+			}
+			
+			System.out.println(socket + " issuing ID " + generatedId);
+			
+			ActiveConnections.addBroker(generatedId, socket);
+			out.println(generatedId);
+			
 			while (in.hasNextLine()) {
 				String line = in.nextLine();
 				System.out.println("Broker said: " + line);
@@ -78,5 +89,37 @@ class BrokerHandler implements Runnable {
 
 			System.out.println("Socket closed");
 		}	
+	}
+}
+
+abstract class ActiveConnections {
+	private static HashMap<String, Socket> brokers = new HashMap<String, Socket>();
+	private static HashMap<String, Socket> markets = new HashMap<String, Socket>();
+	
+	public static boolean idIsAvailable(String id) {		
+		if (brokers.get(id) == null && markets.get(id) == null) {
+			return true;
+		}
+		return false;
+	}
+	
+	public static synchronized void addMarket(String marketId, Socket marketSocket) {
+		markets.put(marketId, marketSocket);
+	}
+	
+	public static synchronized void addBroker(String brokerId, Socket brokerSocket) {
+		brokers.put(brokerId, brokerSocket);
+	}
+	
+	public static synchronized void removeBroker(String brokerId) {
+		brokers.remove(brokerId);
+	}
+	
+	public static synchronized void removeMarket(String marketId) {
+		markets.remove(marketId);
+	}
+	
+	public static String[] getAvailableMarkets() {
+		return markets.keySet().toArray(new String[0]);
 	}
 }
