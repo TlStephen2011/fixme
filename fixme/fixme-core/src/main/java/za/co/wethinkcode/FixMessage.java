@@ -45,7 +45,6 @@ package za.co.wethinkcode;
 
 import za.co.wethinkcode.exceptions.FixMessageException;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
