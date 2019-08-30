@@ -44,6 +44,8 @@ package za.co.wethinkcode;
 //    rejected.
 
 import za.co.wethinkcode.exceptions.FixMessageException;
+import za.co.wethinkcode.helpers.CheckSum;
+import za.co.wethinkcode.helpers.FixMessageValidator;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -161,9 +163,8 @@ public class FixMessage {
     this.finalFixMessage = this.fixMessageWithoutChecksum + this.checkSum;
   }
 
-  // The only public getter.
-  public String getFixMessage() {
-
+  @Override
+  public String toString() {
     return this.finalFixMessage;
   }
 
@@ -175,10 +176,10 @@ public class FixMessage {
     String orderAmount
   ) throws FixMessageException {
 
-    this.validateID(sourceID, targetID);
-    this.validateSymbol(symbol);
-    this.validateBuyOrSell(buyOrSell);
-    this.validateAmount(orderAmount);
+    FixMessageValidator.validateID(sourceID, targetID);
+    FixMessageValidator.validateSymbol(symbol);
+    FixMessageValidator.validateBuyOrSell(buyOrSell);
+    FixMessageValidator.validateAmount(orderAmount);
   }
 
   private void validateExecutionReportFixMessage(
@@ -192,72 +193,13 @@ public class FixMessage {
     String avgFilledPrice
   ) throws FixMessageException {
 
-    this.validateID(sourceID, targetID);
-    this.validateOrderStatus(orderStatus);
-    this.validateSymbol(symbol);
-    this.validateBuyOrSell(buyOrSell);
-    this.validateAmount(orderAmount);
-    this.validateAmount(filledAmount);
-    this.validateFilledPrice(avgFilledPrice);
-  }
-
-  private void validateID(String sourceID, String targetID)
-    throws FixMessageException {
-
-    if (sourceID.length() != 6)
-      throw new FixMessageException("Invalid sourceID length, should be 6.");
-
-    if (targetID.length() != 6)
-      throw new FixMessageException("Invalid targetID length, should be 6.");
-  }
-
-  private void validateSymbol(String symbol)
-    throws FixMessageException {
-
-    if (symbol.length() != 3)
-      throw new FixMessageException("Invalid symbol length, should be 3.");
-  }
-
-  private void validateBuyOrSell(String buyOrSell)
-    throws FixMessageException {
-
-    if (!buyOrSell.equals("1") && !buyOrSell.equals("2"))
-      throw new FixMessageException("Invalid buy or sell option," +
-        "buy should be \"1\", sell should be \"2\".");
-  }
-
-  private void validateAmount(String amount)
-      throws FixMessageException {
-
-    try {
-
-      Integer.parseInt(amount);
-    }
-    catch (NumberFormatException e) {
-
-      throw new FixMessageException(e.getMessage());
-    }
-  }
-
-  private void validateOrderStatus(String orderStatus)
-    throws FixMessageException {
-
-    if (!orderStatus.equals("2") && !orderStatus.equals("8"))
-      throw new FixMessageException("Invalid order status option," +
-        "filled should be \"2\", rejected should be \"8\".");
-  }
-
-  private void validateFilledPrice(String avgFilledPrice)
-    throws FixMessageException {
-
-    try {
-
-      Float.parseFloat(avgFilledPrice);
-    }
-    catch (NumberFormatException e) {
-
-      throw new FixMessageException(e.getMessage());
-    }
+    FixMessageValidator.validateID(sourceID, targetID);
+    FixMessageValidator.validateOrderStatus(orderStatus);
+    FixMessageValidator.validateSymbol(symbol);
+    FixMessageValidator.validateBuyOrSell(buyOrSell);
+    FixMessageValidator.validateAmount(orderAmount);
+    FixMessageValidator.validateAmount(filledAmount);
+    FixMessageValidator.validateAvgFilledPrice(avgFilledPrice);
   }
 
   private String generateBrokerOrderID(int digitAmount) {
