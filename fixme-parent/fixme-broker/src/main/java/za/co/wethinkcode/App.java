@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
+
 
 import za.co.wethinkcode.broker.Broker;
 import za.co.wethinkcode.broker.InvalidInputException;
@@ -30,7 +32,7 @@ public class App
     			b.sendMessage(t);
     			// Handle server response from "market"
     			System.out.println(b.processResponse());
-    		} catch (InvalidInputException e) {
+    		} catch (InvalidInputException | IOException | NoSuchElementException e) {
     			System.out.println(e.getMessage());
     		}
     	}
