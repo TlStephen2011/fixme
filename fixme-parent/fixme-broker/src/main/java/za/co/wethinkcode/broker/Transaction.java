@@ -10,6 +10,8 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,8 +20,10 @@ public class Transaction {
 
 	@MarketId
 	private String marketId;
+	@Pattern(regexp = "buy|sell|BUY|SELL", message = "Must be buy or sell.")
 	private String buyOrSell;
 	private String instrument;
+	@Pattern(regexp = "[0-9]+", message = "Must be a number")
 	private String orderQty;
 	
 	
@@ -37,7 +41,7 @@ public class Transaction {
 		if (args.length == 4) {
 			t = new Transaction(args[0], args[1], args[2], args[3]);
 		} else {
-			throw new InvalidInputException("Transaction message must have 4 fields, for example: \n[marketId] [buy|sell] [instrument] [quantity]");
+			throw new InvalidInputException("Transaction message must have 4 fields, for example: \n[marketId] [buyOrSell] [instrument] [orderQTY]");
 		}
 		validateTransaction(t);
 		return t;
@@ -51,7 +55,7 @@ public class Transaction {
 		Set<ConstraintViolation<Transaction>> constraintViolations = validator.validate(t);
 
 		if (constraintViolations.size() > 0) {
-			System.out.println("Your input is invalid");
+			System.out.println("Your input is invalid:\n[marketId] [buyOrSell] [instrument] [orderQTY]");
 			Set<String> violationMessages = new HashSet<String>();
 
 			for (ConstraintViolation<Transaction> constraintViolation : constraintViolations) {
@@ -62,31 +66,31 @@ public class Transaction {
 		}
 	}
 
-	private static boolean isValid(String[] args) {
-		int qty;
-		
-		if (args.length != 4) {
-			return false;
-		}
-		
-		if (args[0].length() != 6) {
-			return false;
-		}
-		
-		if (!args[1].toLowerCase().equals("buy") && !args[1].toLowerCase().equals("sell")) {
-			return false;
-		}
-		
-		if (args[2].length() == 0) {
-			return false;
-		}
-		
-		
-		try {
-			qty = Integer.parseInt(args[3]);
-		} catch (Exception e) {
-			return false;
-		}
-		return true;
-	}
+//	private static boolean isValid(String[] args) {
+//		int qty;
+//
+//		if (args.length != 4) {
+//			return false;
+//		}
+//
+//		if (args[0].length() != 6) {
+//			return false;
+//		}
+//
+//		if (!args[1].toLowerCase().equals("buy") && !args[1].toLowerCase().equals("sell")) {
+//			return false;
+//		}
+//
+//		if (args[2].length() == 0) {
+//			return false;
+//		}
+//
+//
+//		try {
+//			qty = Integer.parseInt(args[3]);
+//		} catch (Exception e) {
+//			return false;
+//		}
+//		return true;
+//	}
 }
