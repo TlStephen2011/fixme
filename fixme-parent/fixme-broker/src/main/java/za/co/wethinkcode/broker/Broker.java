@@ -15,7 +15,7 @@ public class Broker {
     private final String HOST = "127.0.0.1";
     Socket socket;
     
-    public Broker() throws UnknownHostException, IOException{
+    public Broker() throws UnknownHostException, IOException {
     	socket = new Socket(HOST, PORT);
     	System.out.println("Connection to router has been established");
     	brokerId = processResponse();
