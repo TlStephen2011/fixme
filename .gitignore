@@ -1,3 +1,5 @@
 *.class
 target
 fixme-parent/.idea
+.classpath
+.project
