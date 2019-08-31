@@ -12,6 +12,8 @@ import java.util.concurrent.Executors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import za.co.wethinkcode.exceptions.FixMessageException;
+import za.co.wethinkcode.helpers.FixMessageValidator;
 import za.co.wethinkcode.helpers.IdGenerator;
 
 public class App 
@@ -68,51 +70,81 @@ class MarketsHandler implements Runnable {
 
 class MarketHandler implements Runnable {
 	
-	Socket socket = null;
-	String marketId = null;
+	private Socket socket;
+	private String marketId;
 	
 	MarketHandler(Socket s) {	
-		socket = s;
+		this.socket = s;
 	}
 
 	@Override
 	public void run() {
-		System.out.println("Market Connected: " + socket);
-		
-		try {		
-			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-			Scanner in = new Scanner(socket.getInputStream());	
-			// Send market its id TODO fix it
-			marketId = "123456";
-			out.println("123456");
-			System.out.println("Allocating market ID: " + marketId);
 
-			// Add market to active connections
-			ActiveConnections.addMarket("123456", socket);
-			
-			while (in.hasNextLine()) {
-				//Forward message to appropraite broker
-				
-				//Market sending brokerId back for testing
-				String brokerId = in.nextLine();
-				System.out.println("Market sending to router: " + brokerId);
-				Socket broker = ActiveConnections.getBroker(brokerId);
-				PrintWriter toBroker = new PrintWriter(broker.getOutputStream(), true);
-				
-				toBroker.println("Hey I'm the market, I received your message");
+		System.out.println("Market Connected: " + this.socket);
+		
+		try {
+
+			Scanner fromMarket = new Scanner(this.socket.getInputStream());
+			PrintWriter toMarket = new PrintWriter(this.socket.getOutputStream(), true);
+
+      this.marketId = IdGenerator.generateId(6);
+			while (!ActiveConnections.idIsAvailable(this.marketId)) {
+				this.marketId = IdGenerator.generateId(6);
 			}
+
+			ActiveConnections.addMarket(this.marketId, this.socket);
+			toMarket.println(this.marketId);
+			
+			while (fromMarket.hasNextLine()) {
+
+			  String line = fromMarket.nextLine();
+
+        // TODO: Remove this fakeExecutionReport and replace with the real thing
+        //       once a proper FIX encoded executionReport is sent from the market.
+
+        FixMessage fakeExecutionReport = new FixMessage(
+          "6Q8D7Z",
+          "1D5P8X",
+          "2",
+          "XAU",
+          "2",
+          "100",
+          "100",
+          "25.9"
+        );
+
+        line = fakeExecutionReport.toString();
+
+        ExecutionReportDecoded decodedExecutionReport = new ExecutionReportDecoded(line);
+
+        FixMessageValidator.validateCheckSum(
+          decodedExecutionReport.getMessageWithoutChecksum(),
+          decodedExecutionReport.getChecksum()
+        );
+
+        String brokerID = decodedExecutionReport.getTargetID();
+        Socket broker = ActiveConnections.getBroker(brokerID);
+
+        // TODO: This will not work as targetID is hard coded. Replace with real.
+        PrintWriter toBroker = new PrintWriter(broker.getOutputStream(), true);
+
+        // Forwarding message to related broker.
+				toBroker.println(decodedExecutionReport.toString());
+			}
+
 		} catch (IOException e) {
-			System.out.println("Error: " + e.getMessage());
+      e.printStackTrace(System.out);
+    } catch (FixMessageException e) {
+		  e.printStackTrace(System.out);
 		} catch (Exception e) {
-			System.out.println("Error: " + e.getMessage());
+			e.printStackTrace(System.out);
 		} finally {
 			try {				
-				socket.close();
-				ActiveConnections.removeMarket(marketId);
-			} catch (IOException e) {}
-
-			// Notify brokers that a market has disconnected
-			System.out.println("Socket closed");
+				this.socket.close();
+				ActiveConnections.removeMarket(this.marketId);
+			} catch (IOException e) {
+			  e.printStackTrace(System.out);
+      }
 		}	
 	}
 }
@@ -120,77 +152,94 @@ class MarketHandler implements Runnable {
 
 class BrokerHandler implements Runnable {
 	
-	Socket socket = null;
-	String brokerId = null;
+	private Socket socket;
+	private String brokerId;
 	
 	BrokerHandler(Socket s) {	
-		socket = s;
+		this.socket = s;
 	}
 
 	@Override
 	public void run() {
-		System.out.println("Broker Connected: " + socket);
+
+		System.out.println("Broker Connected: " + this.socket);
 		
 		try {
 			
-			Scanner in = new Scanner(socket.getInputStream());
-			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+			Scanner fromBroker = new Scanner(this.socket.getInputStream());
+			PrintWriter toBroker = new PrintWriter(this.socket.getOutputStream(), true);
 						
-			brokerId = IdGenerator.generateId(6);
-			while (!ActiveConnections.idIsAvailable(brokerId)) {
-				brokerId = IdGenerator.generateId(6);
+			this.brokerId = IdGenerator.generateId(6);
+			while (!ActiveConnections.idIsAvailable(this.brokerId)) {
+				this.brokerId = IdGenerator.generateId(6);
 			}
 			
-			System.out.println(socket + " issuing ID " + brokerId);
+			ActiveConnections.addBroker(this.brokerId, this.socket);
+			toBroker.println(this.brokerId); // Gives broker it's assigned ID.
 			
-			ActiveConnections.addBroker(brokerId, socket);
-			out.println(brokerId);
-			
-			//TODO: Validate broker message
-			// TODO: broker message must be forwarded to market
-			
-			while (in.hasNextLine()) {
-				String line = in.nextLine();
-				
-				// Find market socket, for now assume market ID is 123456
-				Socket market = ActiveConnections.getMarket("123456");
-				PrintWriter toMarket = new PrintWriter(market.getOutputStream(), true);
-				Scanner fromMarket = new Scanner(market.getInputStream());
-				
-				System.out.println("Broker said: " + line);
-				// Sending broker id for testing
-				toMarket.println(brokerId);
+			while (fromBroker.hasNextLine()) {
 
-				// Sending market response to broker WRONG dont send here
-				//out.println(fromMarket.nextLine());
+				String line = fromBroker.nextLine();
+
+				// TODO: Remove this fakeBuyMessage and replace with the real thing once
+        //       a proper FIX encoded buy or sell message is sent from the broker.
+
+        FixMessage fakeBuyMessage = new FixMessage(
+          "1D5P8X",
+          "6Q8D7Z",
+          "XAU",
+          "1",
+          "100"
+        );
+
+        line = fakeBuyMessage.toString();
+
+        SingleOrderDecoded decodedBrokerMessage = new SingleOrderDecoded(line);
+
+        // Validating FIX message checksum.
+        FixMessageValidator.validateCheckSum(
+          decodedBrokerMessage.getMessageWithoutChecksum(),
+          decodedBrokerMessage.getChecksum()
+        );
+
+        String marketID = decodedBrokerMessage.getTargetID();
+				Socket market = ActiveConnections.getMarket(marketID);
+
+        // TODO: This will not work as targetID is hard coded. Replace with real.
+				PrintWriter toMarket = new PrintWriter(market.getOutputStream(), true);
+
+				// Forwarding message to related market.
+				toMarket.println(decodedBrokerMessage.toString());
 			}
-			
+
 		} catch (IOException e) {
-			System.out.println("Error: " + e.getMessage());
-		} catch (Exception e) {
-			System.out.println("Error: " + e.getMessage());
+			e.printStackTrace(System.out);
+		} catch (FixMessageException e) {
+		  e.printStackTrace(System.out);
+    } catch (Exception e) {
+		  e.printStackTrace(System.out);
 		} finally {
 			try {				
-				socket.close();
-				ActiveConnections.removeBroker(brokerId);
-			} catch (IOException e) { 
-				// Do nothing 				
+				this.socket.close();
+				ActiveConnections.removeBroker(this.brokerId);
+			} catch (IOException e) {
+			  e.printStackTrace(System.out);
 			}
-
-			// No need to print broker socket closing
-			System.out.println("Socket closed");
 		}	
 	}
 }
 
 abstract class ActiveConnections {
-	private static HashMap<String, Socket> brokers = new HashMap<String, Socket>();
-	private static HashMap<String, Socket> markets = new HashMap<String, Socket>();
+
+	private static HashMap<String, Socket> brokers = new HashMap<>();
+	private static HashMap<String, Socket> markets = new HashMap<>();
 	
-	public static boolean idIsAvailable(String id) {		
+	public static boolean idIsAvailable(String id) {
+
 		if (brokers.get(id) == null && markets.get(id) == null) {
 			return true;
 		}
+
 		return false;
 	}
 	
@@ -224,6 +273,6 @@ abstract class ActiveConnections {
 	
 	//Test method TODO remove
 	public static String[] getAvailableBrokers() {
-		return brokers.keySet().toArray(new String[0]);
+	  return brokers.keySet().toArray(new String[0]);
 	}
 }
