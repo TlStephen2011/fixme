@@ -1,4 +1,4 @@
-package za.co.wethinkcode.instruments;
+package za.co.wethinkcode.helpers;
 
 public class Instrument {
 	public int id;
@@ -13,5 +13,10 @@ public class Instrument {
 	
 	public Instrument() {
 		
+	}
+	
+	@Override
+	public String toString() {
+		return instrument;
 	}
 }

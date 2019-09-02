@@ -7,7 +7,9 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Scanner;
 
-import za.co.wethinkcode.instruments.Instrument;
+import za.co.wethinkcode.helpers.BroadcastDecoder;
+import za.co.wethinkcode.helpers.BroadcastEncoder;
+import za.co.wethinkcode.helpers.Instrument;
 import za.co.wethinkcode.instruments.InstrumentReader;
 
 public class App 
@@ -18,9 +20,19 @@ public class App
     	
     	List<Instrument> instruments = InstrumentReader.getInstruments();
     	
-    	for (Instrument i : instruments) {
-    		System.out.println(i.instrument);
+    	String encodedOpen = BroadcastEncoder.encode("123456", instruments, true);
+    	String encodedClose = BroadcastEncoder.encode("123456", instruments, false);
+    	System.out.println(encodedOpen);
+    	
+    	List<Instrument> i = BroadcastDecoder.decode(encodedOpen);
+    	
+    	for (Instrument in : i) {
+    		System.out.println(in.toString());
     	}
+    	
+    	System.out.println(BroadcastDecoder.isOpenMarket(encodedOpen));
+    	System.out.println(BroadcastDecoder.isOpenMarket(encodedClose));
+    	System.out.println(BroadcastDecoder.getMarketId(encodedOpen));
     	
     	
 //    	Socket s = new Socket("127.0.0.1", 5001);

@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 
+import za.co.wethinkcode.helpers.Instrument;
+
 public class InstrumentReader {
 	
 	private static String[] readableMarkets = {"Market1", "Market2", "Market3", "Market4", "Market5"};
