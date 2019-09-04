@@ -1,7 +1,15 @@
 package za.co.wethinkcode;
 
 import za.co.wethinkcode.exceptions.FixMessageException;
+import za.co.wethinkcode.helpers.BroadcastDecoder;
+import za.co.wethinkcode.helpers.BroadcastEncoder;
 import za.co.wethinkcode.helpers.FixMessageValidator;
+import za.co.wethinkcode.helpers.Instrument;
+
+import java.awt.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Hello world!
@@ -94,6 +102,60 @@ public class App
           System.out.println(executionReportDecoded.getOrderAmount());
           System.out.println(executionReportDecoded.getFilledAmount());
           System.out.println(executionReportDecoded.getAvgFilledPrice());
+
+          System.out.println();
+          System.out.println("BroadcastEncoder Test:");
+          System.out.println();
+
+          List<Instrument> instruments = new LinkedList<>();
+
+          // Instruments
+          Instrument gold = new Instrument(1, "GOLD", 100);
+          Instrument diamond = new Instrument(2, "DIAMOND", 20);
+          Instrument silver = new Instrument(3, "SILVER", 50);
+
+          instruments.add(gold);
+          instruments.add(diamond);
+          instruments.add(silver);
+
+          String encodedBroadcast = BroadcastEncoder.encode(
+            "5G7D8P",
+              instruments,
+              true
+          );
+
+          System.out.println(encodedBroadcast);
+
+          System.out.println();
+          System.out.println("BroadcastDecoder Test:");
+          System.out.println();
+
+          // Takes the encoded string and produces a list of instruments from it.
+          List<Instrument> decodedBroadcast = BroadcastDecoder.decode(encodedBroadcast);
+
+          for (Instrument i : decodedBroadcast) {
+
+            System.out.println(i);
+          }
+          System.out.println();
+
+          System.out.println(BroadcastDecoder.isOpenMarket(encodedBroadcast));
+          System.out.println(BroadcastDecoder.getMarketId(encodedBroadcast));
+          System.out.println();
+
+          System.out.println();
+          System.out.println("Testing HashMap.toString()");
+          System.out.println();
+
+          HashMap<String, String> testMe = new HashMap<>();
+
+          testMe.put("5G7J8L", "weo");
+          testMe.put("3D1X8K", "derp");
+          testMe.put("5V8M0X", "quack");
+
+          String hashMapString = testMe.toString();
+          System.out.println(hashMapString);
+          System.out.println(testMe.values().toString());
         }
         catch (FixMessageException e) {
 
