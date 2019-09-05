@@ -82,8 +82,6 @@ public class App
     	Thread t2 = new Thread(new MarketsHandler());
     	t2.start();
     }
-
-    // TODO: Need to close sockets / PrintWriters + Scanners here.
 }
 
 class BrokersHandler implements Runnable {
@@ -126,6 +124,7 @@ class MarketHandler implements Runnable {
 
 	private Socket socket;
 	private String marketId;
+	private Scanner fromMarket;
 	private String encodedBroadcast;
 	
 	MarketHandler(Socket s) {	
@@ -140,7 +139,7 @@ class MarketHandler implements Runnable {
 		try {
 
 			ActiveConnections.addMarket(this.marketId, this.socket);
-			Scanner fromMarket = ActiveConnections.getFromMarket(this.marketId);
+			this.fromMarket = ActiveConnections.getFromMarket(this.marketId);
 
       this.marketId = IdGenerator.generateId(6);
 			while (!ActiveConnections.idIsAvailable(this.marketId)) {
@@ -151,8 +150,8 @@ class MarketHandler implements Runnable {
 			ActiveConnections.writeToMarket(this.marketId, this.marketId);
 
 			// Getting connected market instrument list, this should block.
-      if (fromMarket.hasNextLine()) {
-        this.encodedBroadcast = fromMarket.nextLine();
+      if (this.fromMarket.hasNextLine()) {
+        this.encodedBroadcast = this.fromMarket.nextLine();
       }
 
       // Adding market instrument list to marketHashMap.
@@ -163,9 +162,9 @@ class MarketHandler implements Runnable {
 
       // Routes FIX execution reports to related brokers. Reading doesn't have
       // to be thread-safe as reading is unique to each thread.
-			while (fromMarket.hasNextLine()) {
+			while (this.fromMarket.hasNextLine()) {
 
-			  String line = fromMarket.nextLine();
+			  String line = this.fromMarket.nextLine();
 
         ExecutionReportDecoded decodedExecutionReport = new ExecutionReportDecoded(line);
 
@@ -186,14 +185,10 @@ class MarketHandler implements Runnable {
 		} catch (Exception e) {
 			e.printStackTrace(System.out);
 		} finally {
-			try {
-			  ActiveConnections.removeEncodedBroadcast(this.encodedBroadcast);
-			  ActiveConnections.notifyBrokersClosedMarket(this.encodedBroadcast);
-				this.socket.close();
-				ActiveConnections.removeMarket(this.marketId);
-			} catch (IOException e) {
-			  e.printStackTrace(System.out);
-      }
+      ActiveConnections.removeEncodedBroadcast(this.encodedBroadcast);
+      ActiveConnections.notifyBrokersClosedMarket(this.encodedBroadcast);
+      this.fromMarket.close();
+      ActiveConnections.removeMarket(this.marketId);
 		}	
 	}
 }
@@ -202,6 +197,7 @@ class BrokerHandler implements Runnable {
 	
 	private Socket socket;
 	private String brokerId;
+	private Scanner fromBroker;
 	
 	BrokerHandler(Socket s) {	
 		this.socket = s;
@@ -215,8 +211,8 @@ class BrokerHandler implements Runnable {
 		try {
 
 			ActiveConnections.addBroker(this.brokerId, this.socket);
-			Scanner fromBroker = ActiveConnections.getFromBroker(this.brokerId);
-						
+			this.fromBroker = ActiveConnections.getFromBroker(this.brokerId);
+
 			this.brokerId = IdGenerator.generateId(6);
 			while (!ActiveConnections.idIsAvailable(this.brokerId)) {
 				this.brokerId = IdGenerator.generateId(6);
@@ -230,9 +226,9 @@ class BrokerHandler implements Runnable {
 
       // Routes FIX buy/sell messages to related markets. Reading doesn't have
       // to be thread-safe as reading is unique to each thread.
-			while (fromBroker.hasNextLine()) {
+			while (this.fromBroker.hasNextLine()) {
 
-				String line = fromBroker.nextLine();
+				String line = this.fromBroker.nextLine();
 
         SingleOrderDecoded decodedBrokerMessage = new SingleOrderDecoded(line);
 
@@ -254,12 +250,8 @@ class BrokerHandler implements Runnable {
     } catch (Exception e) {
 		  e.printStackTrace(System.out);
 		} finally {
-			try {				
-				this.socket.close();
-				ActiveConnections.removeBroker(this.brokerId);
-			} catch (IOException e) {
-			  e.printStackTrace(System.out);
-			}
+      this.fromBroker.close();
+      ActiveConnections.removeBroker(this.brokerId);
 		}	
 	}
 }
