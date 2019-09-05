@@ -20,9 +20,8 @@ public class Broker {
 
     public Broker() throws UnknownHostException, IOException {
         socket = new Socket(HOST, PORT);
-        System.out.println("Connection to router has been established");
         brokerId = processResponse();
-        System.out.println("Allocated ID: " + brokerId);
+        System.out.println("Connection to router has been established\n" + "Allocated ID: " + brokerId + "\n");
     }
 
     public void sendMessage(Transaction t) throws IOException{

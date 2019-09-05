@@ -1,10 +1,7 @@
 package za.co.wethinkcode.broker;
 
-import jdk.jfr.DataAmount;
 import lombok.Data;
-import org.apache.commons.lang3.StringUtils;
 
-import javax.imageio.ImageReader;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -15,6 +12,7 @@ public class Simulation implements  Runnable{
     private Broker broker;
     private int simulationId;
     private static Transaction transaction;
+    private static String transactionString;
     private static String marketId;
     private static String buyOrSell;
     private static String instrument;
@@ -22,9 +20,10 @@ public class Simulation implements  Runnable{
     private int cycles;
 
     public Simulation(int cycles, int id) throws IOException {
-        broker = new Broker();
-        this.cycles = cycles;
         simulationId = id;
+        this.cycles = cycles;
+        System.out.println("Thread " + simulationId + ":");
+        broker = new Broker();
     }
 
     public static void generateTransaction() {
@@ -38,14 +37,15 @@ public class Simulation implements  Runnable{
                 : "sell";
         quantity = getRandomQuantity(buyOrSell);
 
-                try {
-                    transaction = Transaction.buildTransaction(marketId + " "
-                            + buyOrSell + " "
-                            + instrument + " "
-                            + quantity);
-                } catch (InvalidInputException e) {
-                    System.out.println(e.getMessage());
-                }
+        try {
+            transactionString = marketId + " "
+                    + buyOrSell + " "
+                    + instrument + " "
+                    + quantity;
+            transaction = Transaction.buildTransaction(transactionString);
+        } catch (InvalidInputException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     public static String getRandomMarket() {
@@ -60,7 +60,7 @@ public class Simulation implements  Runnable{
 
     public static boolean brokerHasInstrument(String instrument) {
         //TODO:
-        return true;
+        return false;
     }
 
     public static String getRandomQuantity(String buyOrSell) {
@@ -75,16 +75,20 @@ public class Simulation implements  Runnable{
     @Override
     public void run() {
 
+        String response;
         int i = 0;
         while (i < cycles) {
-            System.out.println("Thread - " + simulationId);
-           generateTransaction();
-           try {
-               broker.sendMessage(transaction);
-               System.out.println(broker.processResponse());
-           } catch (IOException | NoSuchElementException e) {
-               System.out.println(e.getMessage());
-           }
+
+            generateTransaction();
+            try {
+                System.out.println("Thread " + simulationId + " Request to Market:\n" + transactionString + "\n");
+                broker.sendMessage(transaction);
+                response = broker.processResponse();
+                System.out.println("Thread " + simulationId + "Response from Market:\n" + response + "\n");
+
+            } catch (IOException | NoSuchElementException e) {
+                System.out.println("Thread " + simulationId + " Error:\n" + e.getMessage() + "\n");
+            }
             i++;
         }
     }
