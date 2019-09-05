@@ -82,6 +82,8 @@ public class App
     	Thread t2 = new Thread(new MarketsHandler());
     	t2.start();
     }
+
+    // TODO: Need to close sockets / PrintWriters + Scanners here.
 }
 
 class BrokersHandler implements Runnable {
@@ -137,25 +139,21 @@ class MarketHandler implements Runnable {
 		
 		try {
 
-			Scanner fromMarket = new Scanner(this.socket.getInputStream());
-			PrintWriter toMarket = new PrintWriter(this.socket.getOutputStream(), true);
+			ActiveConnections.addMarket(this.marketId, this.socket);
+			Scanner fromMarket = ActiveConnections.getFromMarket(this.marketId);
+			PrintWriter toMarket = ActiveConnections.getToMarket(this.marketId);
 
       this.marketId = IdGenerator.generateId(6);
 			while (!ActiveConnections.idIsAvailable(this.marketId)) {
 				this.marketId = IdGenerator.generateId(6);
 			}
 
-			ActiveConnections.addMarket(this.marketId, this.socket);
 			toMarket.println(this.marketId);
 
 			// Getting connected market instrument list, this should block.
       if (fromMarket.hasNextLine()) {
         this.encodedBroadcast = fromMarket.nextLine();
       }
-
-      // TODO: Testing if hasNextLine() blocks, remove this.
-      if (this.encodedBroadcast.equals(""))
-        throw new Exception("You done messed up boy.");
 
       // Adding market instrument list to marketHashMap.
       ActiveConnections.addEncodedBroadcast(this.encodedBroadcast);
@@ -176,9 +174,7 @@ class MarketHandler implements Runnable {
         );
 
         String brokerID = decodedExecutionReport.getTargetID();
-        Socket broker = ActiveConnections.getBroker(brokerID);
-
-        PrintWriter toBroker = new PrintWriter(broker.getOutputStream(), true);
+        PrintWriter toBroker = ActiveConnections.getToBroker(brokerID);
 
         // Forwarding message to related broker.
 				toBroker.println(line);
@@ -202,7 +198,6 @@ class MarketHandler implements Runnable {
 	}
 }
 
-
 class BrokerHandler implements Runnable {
 	
 	private Socket socket;
@@ -218,20 +213,20 @@ class BrokerHandler implements Runnable {
 		System.out.println("Broker Connected: " + this.socket);
 		
 		try {
-			
-			Scanner fromBroker = new Scanner(this.socket.getInputStream());
-			PrintWriter toBroker = new PrintWriter(this.socket.getOutputStream(), true);
+
+			ActiveConnections.addBroker(this.brokerId, this.socket);
+			Scanner fromBroker = ActiveConnections.getFromBroker(this.brokerId);
+			PrintWriter toBroker = ActiveConnections.getToBroker(this.brokerId);
 						
 			this.brokerId = IdGenerator.generateId(6);
 			while (!ActiveConnections.idIsAvailable(this.brokerId)) {
 				this.brokerId = IdGenerator.generateId(6);
 			}
-			
-			ActiveConnections.addBroker(this.brokerId, this.socket);
+
 			toBroker.println(this.brokerId); // Gives broker it's assigned ID.
 
       // Sending broker the current traded market instruments.
-      ActiveConnections.notifyBrokerMarketInstruments(this.socket);
+      ActiveConnections.notifyBrokerMarketInstruments(this.brokerId);
 			
 			while (fromBroker.hasNextLine()) {
 
@@ -246,9 +241,7 @@ class BrokerHandler implements Runnable {
         );
 
         String marketID = decodedBrokerMessage.getTargetID();
-				Socket market = ActiveConnections.getMarket(marketID);
-
-				PrintWriter toMarket = new PrintWriter(market.getOutputStream(), true);
+				PrintWriter toMarket = ActiveConnections.getToMarket(marketID);
 
 				// Forwarding message to related market.
 				toMarket.println(line);
@@ -270,10 +263,47 @@ class BrokerHandler implements Runnable {
 	}
 }
 
+// Socket Connectivity Singleton Wrapper.
+class SocketConnectivity {
+
+  private Socket socket;
+  private PrintWriter toSocket;
+  private Scanner fromSocket;
+
+  public SocketConnectivity(Socket socket) throws IOException {
+
+    this.socket = socket;
+    this.toSocket = new PrintWriter(socket.getOutputStream(), true);
+    this.fromSocket = new Scanner(socket.getInputStream());
+  }
+
+  public PrintWriter getToSocket() {
+
+    return this.toSocket;
+  }
+
+  public Scanner getFromSocket() {
+
+    return this.fromSocket;
+  }
+
+  // TODO: Verify that PrintWriter and Scanner is safe to close after
+  //       closing socket directly.
+  //
+  // Hypothetically this should raise and IOException when trying to close
+  // the toSocket and fromSocket streams after closing the socket itself.
+  public void closeSocket() throws IOException {
+
+    this.socket.close();
+    this.toSocket.close();
+    this.fromSocket.close();
+  }
+}
+
 abstract class ActiveConnections {
 
-	private static HashMap<String, Socket> brokers = new HashMap<>();
-	private static HashMap<String, Socket> markets = new HashMap<>();
+  private static HashMap<String, SocketConnectivity> brokers = new HashMap<>();
+  private static HashMap<String, SocketConnectivity> markets = new HashMap<>();
 	private static HashMap<String, String> marketInstruments = new HashMap<>();
 	
 	public static boolean idIsAvailable(String id) {
@@ -285,12 +315,16 @@ abstract class ActiveConnections {
 		return false;
 	}
 	
-	public static synchronized void addMarket(String marketId, Socket marketSocket) {
-		markets.put(marketId, marketSocket);
+	public static synchronized void addMarket(String marketId, Socket marketSocket)
+    throws IOException {
+
+		markets.put(marketId, new SocketConnectivity(marketSocket));
 	}
 	
-	public static synchronized void addBroker(String brokerId, Socket brokerSocket) {
-		brokers.put(brokerId, brokerSocket);
+	public static synchronized void addBroker(String brokerId, Socket brokerSocket)
+    throws IOException {
+
+		brokers.put(brokerId, new SocketConnectivity(brokerSocket));
 	}
 
 	public static synchronized void addEncodedBroadcast(String encodedMarketBroadcast) {
@@ -301,11 +335,17 @@ abstract class ActiveConnections {
     );
   }
 	
-	public static synchronized void removeBroker(String brokerId) {
+	public static synchronized void removeBroker(String brokerId)
+    throws IOException {
+
+	  brokers.get(brokerId).closeSocket();
 		brokers.remove(brokerId);
 	}
 	
-	public static synchronized void removeMarket(String marketId) {
+	public static synchronized void removeMarket(String marketId)
+    throws IOException {
+
+	  markets.get(marketId).closeSocket();
 		markets.remove(marketId);
 	}
 
@@ -314,14 +354,26 @@ abstract class ActiveConnections {
 	  String marketId = BroadcastDecoder.getMarketId(encodedBroadcast);
 	  marketInstruments.remove(marketId);
   }
-	
-	public static Socket getMarket(String marketId) {
-		return markets.get(marketId);
-	}
-	
-	public static Socket getBroker(String brokerId) {
-		return brokers.get(brokerId);
-	}
+
+  public static PrintWriter getToBroker(String brokerId) {
+
+	  return brokers.get(brokerId).getToSocket();
+  }
+
+  public static Scanner getFromBroker(String brokerId) {
+
+	  return brokers.get(brokerId).getFromSocket();
+  }
+
+  public static PrintWriter getToMarket(String marketId) {
+
+    return markets.get(marketId).getToSocket();
+  }
+
+  public static Scanner getFromMarket(String marketId) {
+
+    return markets.get(marketId).getFromSocket();
+  }
 
 	// TODO: Test.
 	// Broker gets notified when a market disconnects.
@@ -330,15 +382,12 @@ abstract class ActiveConnections {
 	  String marketId = BroadcastDecoder.getMarketId(encodedBroadcast);
 	  String closedMarket = BroadcastEncoder.encode(marketId, null, false);
 
-	  brokers.forEach((brokerId, socket) -> {
+	  brokers.forEach((brokerId, socketConnectivity) -> {
 
 	    try {
 
-        PrintWriter toBroker = new PrintWriter(socket.getOutputStream(), true);
+        PrintWriter toBroker = getToBroker(brokerId);
         toBroker.println(closedMarket);
-      }
-	    catch (IOException e) {
-	      e.printStackTrace(System.out);
       }
 	    catch (Exception e) {
 	      e.printStackTrace(System.out);
@@ -350,15 +399,12 @@ abstract class ActiveConnections {
   // Broker gets notified when a market connects.
 	public static void notifyBrokersOpenMarket(String encodedBroadcast) {
 
-	  brokers.forEach((brokerId, socket) -> {
+	  brokers.forEach((brokerId, socketConnectivity) -> {
 
 	    try {
 
-        PrintWriter toBroker = new PrintWriter(socket.getOutputStream(), true);
+        PrintWriter toBroker = getToBroker(brokerId);
         toBroker.println(encodedBroadcast);
-      }
-	    catch (IOException e) {
-	      e.printStackTrace(System.out);
       }
 	    catch (Exception e) {
 	      e.printStackTrace(System.out);
@@ -368,17 +414,14 @@ abstract class ActiveConnections {
 
   // TODO: Test.
   // Broker receives market instruments upon connection to router.
-  public static void notifyBrokerMarketInstruments(Socket brokerSocket) {
+  public static void notifyBrokerMarketInstruments(String brokerId) {
 
     try {
 
-      PrintWriter toBroker = new PrintWriter(brokerSocket.getOutputStream(), true);
+      PrintWriter toBroker = getToBroker(brokerId);
       marketInstruments.forEach((marketId, encodedBroadcast) -> {
         toBroker.println(encodedBroadcast);
       });
-    }
-    catch (IOException e) {
-      e.printStackTrace(System.out);
     }
     catch (Exception e) {
       e.printStackTrace(System.out);
