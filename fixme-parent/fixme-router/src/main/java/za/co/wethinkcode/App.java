@@ -14,60 +14,6 @@ import org.apache.logging.log4j.Logger;
 import za.co.wethinkcode.exceptions.FixMessageException;
 import za.co.wethinkcode.helpers.*;
 
-// Protocol Example:
-//
-// 1.  Router starts up.
-// 2.  Market connects.
-// 3.  Router gives market its unique ID.
-// 4.  Market gives router the traded list of instruments, router saves that list to
-//     HashMap.
-// 5.  Market is ready to receive FIX messages.
-// 6.  Router attempts to notify connected brokers by sending market HashMap to each connected broker.
-// 7.  Broker connects.
-// 8.  Router gives broker its unique ID.
-// 9.  Router gives broker market HashMap.
-// 10. Broker is ready to send FIX messages or receive FIX messages.
-// 11. Another market connects.
-// 12. Router gives market its unique ID.
-// 13. Market gives router the traded list of instruments, router saves that list to
-//     HashMap.
-// 14. Market is ready to receive FIX messages.
-// 15. Router attempts to notify connected brokers by sending market HashMap to each connected broker.
-// 16. Broker receives market HashMap.
-// 17. Broker sends FIX buy message using market HashMap.
-// 18. Router checks FIX buy message checksum.
-// 19. Router forwards FIX buy message to related market using market / targetID.
-// 20. Market executes FIX buy message.
-// 21. Market returns FIX execution report.
-// 22. Router forwards FIX execution report to related broker using broker / target ID.
-// 23. A market disconnects.
-// 24. Router removes market from market HashMap.
-// 25. Router attempts to notify connected brokers by sending market HashMap to each connected broker.
-
-// Types of messages that router should handle:
-//
-// 1.  market list of instruments (EncodedBroadcast upon market connection).
-// 2.  FIX messages (checksum validation).
-
-// Types of messages that market should handle:
-//
-// 1.  Assigned ID.
-// 2.  FIX buy / sell message (from broker through router).
-
-// Types of messages that broker should handle:
-//
-// 1.  Assigned ID.
-// 2.  FIX execution report (from market through router).
-// 3.  market HashMap (from router).
-
-// Caveats:
-//
-// 1.  The market should mutate market state synchronously.
-// 2.  The broker should receive messages synchronously, otherwise a market might
-//     be replying to that broker, i.e. execution report, and at the same time,
-//     another market disconnected, forcing the router to notify the brokers by sending
-//     the market HashMap, so the broker ends up receiving two messages.
-
 public class App 
 {
     private static final Logger logger = LogManager.getLogger(App.class.getName());
