@@ -1,5 +1,7 @@
 package za.co.wethinkcode.broker;
 
+import lombok.Data;
+import za.co.wethinkcode.ExecutionReportDecoded;
 import za.co.wethinkcode.FixMessage;
 import za.co.wethinkcode.exceptions.FixMessageException;
 
@@ -9,6 +11,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
 
+@Data
 public class Broker {
 
     // TODO maybe maintain one instance of the Scanner and PrintWriter
@@ -16,12 +19,20 @@ public class Broker {
     private String brokerId;
     private final int PORT = 5000;
     private final String HOST = "127.0.0.1";
-    Socket socket;
+    private Socket socket;
+    private MarketInstruments marketInstruments;
 
     public Broker() throws UnknownHostException, IOException {
         socket = new Socket(HOST, PORT);
-        brokerId = processResponse();
+        brokerId =  new Scanner(socket.getInputStream()).nextLine();
         System.out.println("Connection to router has been established\n" + "Allocated ID: " + brokerId + "\n");
+        marketInstruments = new MarketInstruments();
+    }
+
+    public Broker(int simulationId) throws IOException{
+        socket = new Socket(HOST, PORT);
+        brokerId = processResponse();
+        System.out.println("Thread " + simulationId + ":\n" + "Connection to router has been established\n" + "Allocated ID: " + brokerId + "\n");
     }
 
     public void sendMessage(Transaction t) throws IOException{
@@ -45,8 +56,20 @@ public class Broker {
 
     public String processResponse() throws IOException {
         Scanner in = new Scanner(socket.getInputStream());
-        return in.nextLine();
+        String line = in.nextLine();
+
+        try {
+            ExecutionReportDecoded executionReport = new ExecutionReportDecoded(line);
+            System.out.println(executionReport.getMessageTimeSent());
+           // marketInstruments.updateQuantities(executionReport);
+
+        } catch (FixMessageException e) {
+            marketInstruments.updateMarketInstruments(line);
+            marketInstruments.printMarketInstruments(0);
+        }
+        return line;
     }
+
 
 
 

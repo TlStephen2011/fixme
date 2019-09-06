@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.io.IOException;
 import java.util.NoSuchElementException;
+import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Data
@@ -17,13 +18,14 @@ public class Simulation implements  Runnable{
     private static String buyOrSell;
     private static String instrument;
     private static String quantity;
+    private MarketInstruments marketInstruments;
     private int cycles;
 
     public Simulation(int cycles, int id) throws IOException {
         simulationId = id;
         this.cycles = cycles;
-        System.out.println("Thread " + simulationId + ":");
-        broker = new Broker();
+        broker = new Broker(id);
+        marketInstruments = new MarketInstruments();
     }
 
     public static void generateTransaction() {
@@ -72,13 +74,30 @@ public class Simulation implements  Runnable{
         }
     }
 
+
+    public void awaitBroadCast() {
+        String line;
+        try {
+            Scanner in = new Scanner(broker.getSocket().getInputStream());
+            System.out.println("Thread " + simulationId + ":\nWaiting for Markets to Connect ...\n");
+            while (!in.hasNextLine()) /* Wait for markets to connect */;
+            line = in.nextLine();
+//            marketInstruments.updateMarketInstruments(line);
+//            marketInstruments.printMarketInstruments(simulationId);
+            //while (true);
+        } catch(IOException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
     @Override
     public void run() {
 
         String response;
         int i = 0;
-        while (i < cycles) {
 
+        awaitBroadCast();
+        while (i < cycles) {
             generateTransaction();
             try {
                 System.out.println("Thread " + simulationId + " Request to Market:\n" + transactionString + "\n");
