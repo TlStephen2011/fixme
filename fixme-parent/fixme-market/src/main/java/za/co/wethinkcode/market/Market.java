@@ -6,6 +6,10 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Scanner;
 
+import za.co.wethinkcode.ExecutionReportDecoded;
+import za.co.wethinkcode.FixMessage;
+import za.co.wethinkcode.SingleOrderDecoded;
+import za.co.wethinkcode.exceptions.FixMessageException;
 import za.co.wethinkcode.helpers.BroadcastEncoder;
 import za.co.wethinkcode.helpers.Instrument;
 import za.co.wethinkcode.instruments.InstrumentReader;
@@ -24,7 +28,7 @@ public class Market {
     	PrintWriter out = new PrintWriter(connection.getOutputStream(), true);
     	
     	marketId = in.nextLine();
-    	
+    	System.out.println("Market was allocated ID: " + marketId);
     	// Read instruments
     	instruments = InstrumentReader.getInstruments();
     	// Broadcast instruments
@@ -36,7 +40,25 @@ public class Market {
 		PrintWriter out = new PrintWriter(connection.getOutputStream(), true);
 		
 		// handle message and send back FIX to connection
-		out.println("Hello there!");
+		try {
+			SingleOrderDecoded fix = new SingleOrderDecoded(message);
+			
+			FixMessage executionReport = new FixMessage(
+					marketId,
+					fix.getSourceID(),
+					"2",
+					fix.getSymbol(),
+					fix.getBuyOrSell(),
+					fix.getOrderAmount(),
+					fix.getOrderAmount(),
+					"42.42"
+			);
+			
+			out.println(executionReport);
+			
+		} catch (FixMessageException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public String getFixMessage() throws IOException {
