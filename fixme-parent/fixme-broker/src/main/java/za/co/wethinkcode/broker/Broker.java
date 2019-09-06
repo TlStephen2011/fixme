@@ -20,17 +20,20 @@ public class Broker {
     private final int PORT = 5000;
     private final String HOST = "127.0.0.1";
     private Socket socket;
+    private Scanner fromRouter;
     private MarketInstruments marketInstruments;
 
     public Broker() throws UnknownHostException, IOException {
         socket = new Socket(HOST, PORT);
-        brokerId =  new Scanner(socket.getInputStream()).nextLine();
+        this.fromRouter = new Scanner(socket.getInputStream());
+        brokerId = this.fromRouter.nextLine();
         System.out.println("Connection to router has been established\n" + "Allocated ID: " + brokerId + "\n");
         marketInstruments = new MarketInstruments();
     }
 
     public Broker(int simulationId) throws IOException{
         socket = new Socket(HOST, PORT);
+        // TODO: Might need to create the scanner object here as well.
         brokerId = processResponse();
         System.out.println("Thread " + simulationId + ":\n" + "Connection to router has been established\n" + "Allocated ID: " + brokerId + "\n");
     }
@@ -55,12 +58,20 @@ public class Broker {
     }
 
     public String processResponse() throws IOException {
-        Scanner in = new Scanner(socket.getInputStream());
-        String line = in.nextLine();
+
+        String line = "";
+
+        // This will block for input.
+        if (this.fromRouter.hasNextLine()) {
+
+          line = this.fromRouter.nextLine();
+        }
+
+        System.out.println("line read is: " + line);
 
         try {
             ExecutionReportDecoded executionReport = new ExecutionReportDecoded(line);
-            System.out.println(executionReport.getMessageTimeSent());
+            // System.out.println(executionReport.getMessageTimeSent());
            // marketInstruments.updateQuantities(executionReport);
 
         } catch (FixMessageException e) {
