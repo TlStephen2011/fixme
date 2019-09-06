@@ -84,13 +84,13 @@ class MarketHandler implements Runnable {
 		
 		try {
 
-			ActiveConnections.addMarket(this.marketId, this.socket);
-			this.fromMarket = ActiveConnections.getFromMarket(this.marketId);
-
       this.marketId = IdGenerator.generateId(6);
 			while (!ActiveConnections.idIsAvailable(this.marketId)) {
 				this.marketId = IdGenerator.generateId(6);
 			}
+
+      ActiveConnections.addMarket(this.marketId, this.socket);
+			this.fromMarket = ActiveConnections.getFromMarket(this.marketId);
 
 			// Sending related market its unique ID.
 			ActiveConnections.writeToMarket(this.marketId, this.marketId);
@@ -156,13 +156,13 @@ class BrokerHandler implements Runnable {
 		
 		try {
 
-			ActiveConnections.addBroker(this.brokerId, this.socket);
-			this.fromBroker = ActiveConnections.getFromBroker(this.brokerId);
-
 			this.brokerId = IdGenerator.generateId(6);
 			while (!ActiveConnections.idIsAvailable(this.brokerId)) {
 				this.brokerId = IdGenerator.generateId(6);
 			}
+
+      ActiveConnections.addBroker(this.brokerId, this.socket);
+			this.fromBroker = ActiveConnections.getFromBroker(this.brokerId);
 
 			// Sending related broker its unique ID.
       ActiveConnections.writeToBroker(this.brokerId, this.brokerId);
