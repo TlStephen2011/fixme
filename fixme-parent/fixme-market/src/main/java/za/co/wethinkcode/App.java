@@ -1,54 +1,33 @@
 package za.co.wethinkcode;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.List;
-import java.util.Scanner;
 
-import za.co.wethinkcode.helpers.BroadcastDecoder;
-import za.co.wethinkcode.helpers.BroadcastEncoder;
-import za.co.wethinkcode.helpers.Instrument;
-import za.co.wethinkcode.instruments.InstrumentReader;
+import za.co.wethinkcode.market.Market;
 
-public class App 
-{
+public class App {
     public static void main( String[] args ) throws UnknownHostException, IOException, Exception {
+    	Market m = new Market();
     	
-    	// Testing instrument creation
-    	
-    	List<Instrument> instruments = InstrumentReader.getInstruments();
-    	
-    	String encodedOpen = BroadcastEncoder.encode("123456", instruments, true);
-    	String encodedClose = BroadcastEncoder.encode("123456", instruments, false);
-    	System.out.println(encodedOpen);
-    	
-    	List<Instrument> i = BroadcastDecoder.decode(encodedOpen);
-    	
-    	for (Instrument in : i) {
-    		System.out.println(in.toString());
+    	while (true) {
+    		String message = m.getFixMessage();
+    		m.sendResponse(message);
     	}
-    	
-    	System.out.println(BroadcastDecoder.isOpenMarket(encodedOpen));
-    	System.out.println(BroadcastDecoder.isOpenMarket(encodedClose));
-    	System.out.println(BroadcastDecoder.getMarketId(encodedOpen));
-    	
-    	
-//    	Socket s = new Socket("127.0.0.1", 5001);
-//    	Scanner in = new Scanner(s.getInputStream());
-//    	PrintWriter out = new PrintWriter(s.getOutputStream(), true);
-    	
-    	// Should be 123456
-    	//System.out.println("Received ID: " + in.nextLine());
-    	
-    	// this will only process one broker at a time
-//    	while (in.hasNextLine()) {
-//    		String brokerId = in.nextLine();
-//    		System.out.println("Received from router: " + brokerId);
-//    		
-//    		out.println(brokerId);
-//    		System.out.println("Send the message back");
-//    	}
     }
 }
+
+//Socket s = new Socket("127.0.0.1", 5001);
+//Scanner in = new Scanner(s.getInputStream());
+//PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+
+// Should be 123456
+//System.out.println("Received ID: " + in.nextLine());
+
+// this will only process one broker at a time
+//while (in.hasNextLine()) {
+//	String brokerId = in.nextLine();
+//	System.out.println("Received from router: " + brokerId);
+//	
+//	out.println(brokerId);
+//	System.out.println("Send the message back");
+//}
