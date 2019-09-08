@@ -18,10 +18,13 @@ public class MarketInstruments {
     public  void updateMarketInstruments(String broadcastMessage) {
         String marketId = BroadcastDecoder.getMarketId(broadcastMessage);
 
-        if (BroadcastDecoder.isOpenMarket(broadcastMessage))
-            instruments.put(marketId, BroadcastDecoder.decode(broadcastMessage));
-        else
+        if (BroadcastDecoder.isOpenMarket(broadcastMessage)) {
+             instruments.put(marketId, BroadcastDecoder.decode(broadcastMessage));
+        }
+        else {
+            System.out.println("Market " + marketId + " is closed.");
             instruments.remove(marketId);
+        }
     }
 
     public void printMarketInstruments(int simulationId) {
