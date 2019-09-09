@@ -15,7 +15,7 @@ import za.co.wethinkcode.broker.Transaction;
 
 public class App
 {
-    private static boolean dataReceived = false;
+    private volatile static boolean dataReceived = false;
 
     public static void main( String[] args ) throws Exception {
         // Assume interactive mode
@@ -31,10 +31,14 @@ public class App
                     while (true) {
                         try {
                             line = b.processResponse();
+                            System.out.println("Enter transaction message: ");
                             flipSwitch();
                         } catch (IOException e) {
                             System.out.println(e.getMessage());
-                        }
+                        } catch (NoSuchElementException e) {
+                            if (!dataReceived)
+                              b.reestablishConnection();
+                         }
                     }
                 }
             });
@@ -42,7 +46,7 @@ public class App
             // Loop infinitely for input and process
             while (true) {
 
-                System.out.println(dataReceived);
+               // System.out.println(dataReceived);
                 if (dataReceived) {
 
                     try {
@@ -58,7 +62,10 @@ public class App
                         //System.out.println(b.processResponse());
 
 
-                    } catch (InvalidInputException | IOException | NoSuchElementException e) {
+                    } catch (InvalidInputException e) {
+                        System.out.println(e.getMessage());
+                        System.out.println("Enter transaction message: ");
+                    } catch(IOException | NoSuchElementException e) {
                         System.out.println(e.getMessage());
                     }
                     flipSwitch();
@@ -95,7 +102,7 @@ public class App
     private static String getInput() {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
-        System.out.println("Enter transaction message: ");
+//        System.out.println("Enter transaction message: ");
         try {
             return reader.readLine();
         } catch (IOException e) {
@@ -112,9 +119,9 @@ public class App
         return false;
     }
 
-    private synchronized static void flipSwitch() {
+    public synchronized static void flipSwitch() {
         dataReceived = !dataReceived;
-        System.out.println(dataReceived);
+       // System.out.println(dataReceived);
     }
 
 }

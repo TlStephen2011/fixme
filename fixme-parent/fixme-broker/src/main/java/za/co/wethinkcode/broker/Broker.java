@@ -29,6 +29,7 @@ public class Broker {
         brokerId = this.fromRouter.nextLine();
         System.out.println("Connection to router has been established\n" + "Allocated ID: " + brokerId + "\n");
         marketInstruments = new MarketInstruments();
+        System.out.println("Awaiting market connections... ");
     }
 
     public Broker(int simulationId) throws IOException{
@@ -38,7 +39,7 @@ public class Broker {
         System.out.println("Thread " + simulationId + ":\n" + "Connection to router has been established\n" + "Allocated ID: " + brokerId + "\n");
     }
 
-    public void sendMessage(Transaction t) throws IOException{
+    public void sendMessage(Transaction t) throws IOException {
         PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
         FixMessage message;
         try {
@@ -53,8 +54,6 @@ public class Broker {
         }catch (FixMessageException e) {
             System.out.println(e.getMessage());
         }
-
-
     }
 
     public String processResponse() throws IOException {
@@ -67,18 +66,54 @@ public class Broker {
           line = this.fromRouter.nextLine();
         }
 
-        System.out.println("line read is: " + line);
+        //System.out.println("line read is: " + line);
+
+       // System.out.println("RESPONSE: " + line);
 
         try {
             ExecutionReportDecoded executionReport = new ExecutionReportDecoded(line);
-            // System.out.println(executionReport.getMessageTimeSent());
+            System.out.println("Market "
+                            + executionReport.getSourceID()
+                           + (executionReport.getOrderStatus().equals("1") ? " ACCEPTED " : " REJECTED ")
+                    + "broker "
+                    + executionReport.getTargetID()
+                    + "'s request to "
+                    + (executionReport.getBuyOrSell().equals("1") ? "buy " : "sell ")
+                    + executionReport.getSymbol());
            // marketInstruments.updateQuantities(executionReport);
 
         } catch (FixMessageException e) {
             marketInstruments.updateMarketInstruments(line);
             marketInstruments.printMarketInstruments(0);
+
         }
         return line;
+    }
+
+    public void reestablishConnection() {
+
+
+        for (int i = 1; i <= 5 ; i++) {
+            System.out.format("Attempt (%d) out of 5\n", i);
+            try {
+                System.out.println("Connection to router lost attempting to reconnect ... "
+                        + String.format("Attempt (%d) out of 5\\n", i));
+                try{Thread.sleep(3000);}catch(Exception exception){}
+                setSocket(new Socket(getHOST(), getPORT()));
+                setBrokerId( new Scanner(getSocket().getInputStream()).nextLine());
+                System.out.println("Connection to router has been established\n" + "Allocated ID: "
+                        + getBrokerId() + "\n");
+                System.out.println("Awaiting market connections... ");
+                break;
+            } catch (IOException ioException) {
+                System.out.println("Oops couldn't connect attempting again in 5 seconds.\n");
+                if (i == 5) {
+                    System.out.println("Failed to reconnect.");
+                    System.exit(1);
+                }
+            }
+        }
+
     }
 
 
