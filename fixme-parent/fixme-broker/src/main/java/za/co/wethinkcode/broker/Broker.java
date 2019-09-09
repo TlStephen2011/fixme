@@ -68,8 +68,13 @@ public class Broker {
 
         //System.out.println("line read is: " + line);
 
-       // System.out.println("RESPONSE: " + line);
-
+       // System.out.println("RESPONSE: " + line);        
+        
+        if (line.equals("")) {
+        	System.out.println("Connection to router has failed. Broker is shutting down.");
+        	System.exit(1);
+        }
+        
         try {
             ExecutionReportDecoded executionReport = new ExecutionReportDecoded(line);
             System.out.println("Market "
