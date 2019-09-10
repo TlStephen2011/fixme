@@ -28,15 +28,15 @@ public class MarketInstruments {
     }
 
     public void printMarketInstruments(int simulationId) {
-        StringBuilder s = new StringBuilder();
-
         instruments.forEach((marketId, instruments) -> {
+            StringBuilder s = new StringBuilder();
             for (Instrument i : instruments) {
                 s.append(i.instrument).append(", ");
             }
             System.out.println(
                     (simulationId > 0 ? "Thread " + simulationId + " Market Available:\n" : "" ) +
                     "Market " + marketId + " trades " + s.toString().replaceAll(", $", "."));
+
         });
     }
 

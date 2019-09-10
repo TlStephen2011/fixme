@@ -311,6 +311,8 @@ abstract class ActiveConnections {
 	    try {
 
         writeToBroker(brokerId, closedMarket);
+        writeToBroker(brokerId, "\0");
+
       }
 	    catch (Exception e) {
 	      e.printStackTrace(System.out);
@@ -327,6 +329,7 @@ abstract class ActiveConnections {
 	    try {
 
         writeToBroker(brokerId, encodedBroadcast);
+        writeToBroker(brokerId, "\0");
       }
 	    catch (Exception e) {
 	      e.printStackTrace(System.out);
@@ -343,6 +346,8 @@ abstract class ActiveConnections {
       marketInstruments.forEach((marketId, encodedBroadcast) -> {
         writeToBroker(brokerId, encodedBroadcast);
       });
+      if (marketInstruments.size() > 0)
+		writeToBroker(brokerId, "\0");
     }
     catch (Exception e) {
       e.printStackTrace(System.out);

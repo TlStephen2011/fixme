@@ -58,23 +58,10 @@ public class Broker {
 
     public String processResponse() throws IOException {
 
-        String line = "";
+        String line;
 
-        // This will block for input.
-        if (this.fromRouter.hasNextLine()) {
+          line = fromRouter.nextLine();
 
-          line = this.fromRouter.nextLine();
-        }
-
-        //System.out.println("line read is: " + line);
-
-       // System.out.println("RESPONSE: " + line);        
-        
-        if (line.equals("")) {
-        	System.out.println("Connection to router has failed. Broker is shutting down.");
-        	System.exit(1);
-        }
-        
         try {
             ExecutionReportDecoded executionReport = new ExecutionReportDecoded(line);
             System.out.println("Market "
@@ -88,9 +75,11 @@ public class Broker {
            // marketInstruments.updateQuantities(executionReport);
 
         } catch (FixMessageException e) {
-            marketInstruments.updateMarketInstruments(line);
+            while (line.contains(",")) {
+                marketInstruments.updateMarketInstruments(line);
+                line = fromRouter.nextLine();
+            }
             marketInstruments.printMarketInstruments(0);
-
         }
         return line;
     }
@@ -99,13 +88,13 @@ public class Broker {
 
 
         for (int i = 1; i <= 5 ; i++) {
-            System.out.format("Attempt (%d) out of 5\n", i);
             try {
                 System.out.println("Connection to router lost attempting to reconnect ... "
                         + String.format("Attempt (%d) out of 5\\n", i));
                 try{Thread.sleep(3000);}catch(Exception exception){}
                 setSocket(new Socket(getHOST(), getPORT()));
-                setBrokerId( new Scanner(getSocket().getInputStream()).nextLine());
+                setFromRouter(new Scanner(socket.getInputStream()));
+                setBrokerId(fromRouter.nextLine());
                 System.out.println("Connection to router has been established\n" + "Allocated ID: "
                         + getBrokerId() + "\n");
                 System.out.println("Awaiting market connections... ");

@@ -27,10 +27,9 @@ public class App
 
                 @Override
                 public void run() {
-                    String line;
                     while (true) {
                         try {
-                            line = b.processResponse();
+                            b.processResponse();
                             System.out.println("Enter transaction message: ");
                             flipSwitch();
                         } catch (IOException e) {
@@ -121,7 +120,7 @@ public class App
 
     public synchronized static void flipSwitch() {
         dataReceived = !dataReceived;
-       // System.out.println(dataReceived);
+        //System.out.println(dataReceived);
     }
 
 }
