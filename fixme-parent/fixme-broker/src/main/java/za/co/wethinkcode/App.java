@@ -8,21 +8,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-import za.co.wethinkcode.broker.Broker;
-import za.co.wethinkcode.broker.InvalidInputException;
-import za.co.wethinkcode.broker.Simulation;
-import za.co.wethinkcode.broker.Transaction;
+import za.co.wethinkcode.broker.*;
 
 public class App
 {
-    private volatile static boolean dataReceived = false;
-
+    public volatile static boolean dataReceived = false;
+    public  static MarketInstruments marketInstruments ;
     public static void main( String[] args ) throws Exception {
         // Assume interactive mode
 
         //Establishes a connection to server
         if (args.length == 1 && args[0].equals("-i")) {
             Broker b = new Broker();
+
+            marketInstruments = b.getMarketInstruments();
             Thread t1 = new Thread(new Runnable() {
 
                 @Override
@@ -31,7 +30,8 @@ public class App
                         try {
                             b.processResponse();
                             System.out.println("Enter transaction message: ");
-                            flipSwitch();
+                            if (!dataReceived)
+                                flipSwitch();
                         } catch (IOException e) {
                             System.out.println(e.getMessage());
                         } catch (NoSuchElementException e) {
@@ -101,7 +101,6 @@ public class App
     private static String getInput() {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
-//        System.out.println("Enter transaction message: ");
         try {
             return reader.readLine();
         } catch (IOException e) {
@@ -120,7 +119,7 @@ public class App
 
     public synchronized static void flipSwitch() {
         dataReceived = !dataReceived;
-        //System.out.println(dataReceived);
+       // System.out.println(dataReceived);
     }
 
 }

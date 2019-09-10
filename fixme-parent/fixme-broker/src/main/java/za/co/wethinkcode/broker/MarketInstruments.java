@@ -1,6 +1,7 @@
 package za.co.wethinkcode.broker;
 
 import lombok.Data;
+import za.co.wethinkcode.App;
 import za.co.wethinkcode.ExecutionReportDecoded;
 import za.co.wethinkcode.helpers.BroadcastDecoder;
 import za.co.wethinkcode.helpers.Instrument;
@@ -24,6 +25,8 @@ public class MarketInstruments {
         else {
             System.out.println("Market " + marketId + " is closed.");
             instruments.remove(marketId);
+            if (!App.dataReceived)
+                App.flipSwitch();
         }
     }
 
