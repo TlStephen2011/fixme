@@ -39,6 +39,7 @@ public class MarketIdValidator implements ConstraintValidator<MarketId, String> 
         }
 
         private boolean marketExists(String marketId) {
+
             if (marketId.equals("123456")) {
                 return true;
             }

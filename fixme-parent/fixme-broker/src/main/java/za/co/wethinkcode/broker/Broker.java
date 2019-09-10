@@ -66,7 +66,7 @@ public class Broker {
             ExecutionReportDecoded executionReport = new ExecutionReportDecoded(line);
             System.out.println("Market "
                             + executionReport.getSourceID()
-                           + (executionReport.getOrderStatus().equals("1") ? " ACCEPTED " : " REJECTED ")
+                           + (executionReport.getOrderStatus().equals("2") ? " ACCEPTED " : " REJECTED ")
                     + "broker "
                     + executionReport.getTargetID()
                     + "'s request to "
