@@ -4,15 +4,15 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import za.co.wethinkcode.helpers.IdGenerator;
+import za.co.wethinkcode.exceptions.FixMessageException;
+import za.co.wethinkcode.helpers.*;
 
 public class App 
 {
@@ -23,14 +23,16 @@ public class App
     	// Spawn a server socket on a new thread for broker
     	Thread t1 = new Thread(new BrokersHandler());
     	t1.start();
+    	
+    	// Spawn a server socket on new thread for market
+    	Thread t2 = new Thread(new MarketsHandler());
+    	t2.start();
     }
 }
 
 class BrokersHandler implements Runnable {
 	
 	private static final Logger logger = LogManager.getLogger(BrokersHandler.class.getName());
-	
-	BrokersHandler() {}
 	
 	@Override
 	public void run() {		
@@ -46,87 +48,304 @@ class BrokersHandler implements Runnable {
 	}	
 }
 
-class BrokerHandler implements Runnable {
+class MarketsHandler implements Runnable {
 	
-	Socket socket = null;
-	String brokerId = null;
+	private static final Logger logger = LogManager.getLogger(MarketsHandler.class.getName());	
 	
-	BrokerHandler(Socket s) {	
-		socket = s;
+	@Override
+	public void run() {		
+    	try (ServerSocket listener = new ServerSocket(5001)) {
+			logger.info("Router is now accepting connections from markets");
+			ExecutorService pool = Executors.newFixedThreadPool(20);
+			while (true) {
+				pool.execute(new MarketHandler(listener.accept()));    			
+			}		
+		} catch (IOException e) {
+			System.out.println(e);
+		}
+	}	
+}
+
+class MarketHandler implements Runnable {
+
+	private Socket socket;
+	private String marketId;
+	private Scanner fromMarket;
+	private String encodedBroadcast;
+	
+	MarketHandler(Socket s) {	
+		this.socket = s;
 	}
 
 	@Override
 	public void run() {
-		System.out.println("Broker Connected: " + socket);
+
+		System.out.println("Market Connected: " + this.socket);
 		
 		try {
-			@SuppressWarnings("resource")
-			Scanner in = new Scanner(socket.getInputStream());
-			PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-						
-			brokerId = IdGenerator.generateId(6);
-			while (!ActiveConnections.idIsAvailable(brokerId)) {
-				brokerId = IdGenerator.generateId(6);
+
+      this.marketId = IdGenerator.generateId(6);
+			while (!ActiveConnections.idIsAvailable(this.marketId)) {
+				this.marketId = IdGenerator.generateId(6);
 			}
-			
-			System.out.println(socket + " issuing ID " + brokerId);
-			
-			ActiveConnections.addBroker(brokerId, socket);
-			out.println(brokerId);
-			
-			while (in.hasNextLine()) {
-				String line = in.nextLine();
-				System.out.println("Broker said: " + line);
-				out.println("Cool man");
+
+      ActiveConnections.addMarket(this.marketId, this.socket);
+			this.fromMarket = ActiveConnections.getFromMarket(this.marketId);
+
+			// Sending related market its unique ID.
+			ActiveConnections.writeToMarket(this.marketId, this.marketId);
+
+			// Getting connected market instrument list, this should block.
+      if (this.fromMarket.hasNextLine()) {
+        this.encodedBroadcast = this.fromMarket.nextLine();
+      }
+
+      // Adding market instrument list to marketHashMap.
+      ActiveConnections.addEncodedBroadcast(this.encodedBroadcast);
+
+      // Notifying brokers that a new market is available.
+      ActiveConnections.notifyBrokersOpenMarket(this.encodedBroadcast);
+
+      // Routes FIX execution reports to related brokers. Reading doesn't have
+      // to be thread-safe as reading is unique to each thread.
+			while (this.fromMarket.hasNextLine()) {
+
+			  String line = this.fromMarket.nextLine();
+
+        ExecutionReportDecoded decodedExecutionReport = new ExecutionReportDecoded(line);
+
+        FixMessageValidator.validateCheckSum(
+          decodedExecutionReport.getMessageWithoutChecksum(),
+          decodedExecutionReport.getChecksum()
+        );
+
+        String brokerID = decodedExecutionReport.getTargetID();
+
+        // Forwarding message to related broker.
+        ActiveConnections.writeToBroker(brokerID, line);
 			}
 		} catch (IOException e) {
-			System.out.println("Error: " + e.getMessage());
+      e.printStackTrace(System.out);
+    } catch (FixMessageException e) {
+		  e.printStackTrace(System.out);
 		} catch (Exception e) {
-			System.out.println("Error: " + e.getMessage());
+			e.printStackTrace(System.out);
 		} finally {
-			try {				
-				socket.close();
-				ActiveConnections.removeBroker(brokerId);
-			} catch (IOException e) {}
-
-			System.out.println("Socket closed");
+      ActiveConnections.removeEncodedBroadcast(this.encodedBroadcast);
+      ActiveConnections.notifyBrokersClosedMarket(this.encodedBroadcast);
+      this.fromMarket.close();
+      ActiveConnections.removeMarket(this.marketId);
 		}	
 	}
 }
 
-abstract class ActiveConnections {
-	private static HashMap<String, Socket> brokers = new HashMap<String, Socket>();
-	private static HashMap<String, Socket> markets = new HashMap<String, Socket>();
+class BrokerHandler implements Runnable {
 	
-	public static boolean idIsAvailable(String id) {		
+	private Socket socket;
+	private String brokerId;
+	private Scanner fromBroker;
+	
+	BrokerHandler(Socket s) {	
+		this.socket = s;
+	}
+
+	@Override
+	public void run() {
+
+		System.out.println("Broker Connected: " + this.socket);
+		
+		try {
+
+			this.brokerId = IdGenerator.generateId(6);
+			while (!ActiveConnections.idIsAvailable(this.brokerId)) {
+				this.brokerId = IdGenerator.generateId(6);
+			}
+
+      ActiveConnections.addBroker(this.brokerId, this.socket);
+			this.fromBroker = ActiveConnections.getFromBroker(this.brokerId);
+
+			// Sending related broker its unique ID.
+      ActiveConnections.writeToBroker(this.brokerId, this.brokerId);
+
+      // Sending broker the current traded market instruments.
+      ActiveConnections.notifyBrokerMarketInstruments(this.brokerId);
+
+      // Routes FIX buy/sell messages to related markets. Reading doesn't have
+      // to be thread-safe as reading is unique to each thread.
+			while (this.fromBroker.hasNextLine()) {
+
+				String line = this.fromBroker.nextLine();
+
+        SingleOrderDecoded decodedBrokerMessage = new SingleOrderDecoded(line);
+
+        // Validating FIX message checksum.
+        FixMessageValidator.validateCheckSum(
+          decodedBrokerMessage.getMessageWithoutChecksum(),
+          decodedBrokerMessage.getChecksum()
+        );
+
+        String marketID = decodedBrokerMessage.getTargetID();
+
+				// Forwarding message to related market.
+        ActiveConnections.writeToMarket(marketID, line);
+			}
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		} catch (FixMessageException e) {
+		  e.printStackTrace(System.out);
+    } catch (Exception e) {
+		  e.printStackTrace(System.out);
+		} finally {
+      this.fromBroker.close();
+      ActiveConnections.removeBroker(this.brokerId);
+		}	
+	}
+}
+
+// Socket Connectivity Singleton Wrapper.
+class SocketConnectivity {
+
+  private PrintWriter toSocket;
+  private Scanner fromSocket;
+
+  public SocketConnectivity(Socket socket) throws IOException {
+
+    this.toSocket = new PrintWriter(socket.getOutputStream(), true);
+    this.fromSocket = new Scanner(socket.getInputStream());
+  }
+
+  // Syncing here as PrintWriter is not thread-safe.
+  public synchronized void writeToSocket(String line) {
+
+    this.toSocket.println(line);
+  }
+
+  public Scanner getFromSocket() {
+
+    return this.fromSocket;
+  }
+}
+
+abstract class ActiveConnections {
+
+  private static HashMap<String, SocketConnectivity> brokers = new HashMap<>();
+  private static HashMap<String, SocketConnectivity> markets = new HashMap<>();
+	private static HashMap<String, String> marketInstruments = new HashMap<>();
+	
+	public static boolean idIsAvailable(String id) {
+
 		if (brokers.get(id) == null && markets.get(id) == null) {
 			return true;
 		}
+
 		return false;
 	}
 	
-	public static synchronized void addMarket(String marketId, Socket marketSocket) {
-		markets.put(marketId, marketSocket);
+	public static synchronized void addMarket(String marketId, Socket marketSocket)
+    throws IOException {
+
+		markets.put(marketId, new SocketConnectivity(marketSocket));
 	}
 	
-	public static synchronized void addBroker(String brokerId, Socket brokerSocket) {
-		brokers.put(brokerId, brokerSocket);
+	public static synchronized void addBroker(String brokerId, Socket brokerSocket)
+    throws IOException {
+
+		brokers.put(brokerId, new SocketConnectivity(brokerSocket));
 	}
+
+	public static synchronized void addEncodedBroadcast(String encodedMarketBroadcast) {
+
+	  marketInstruments.put(
+      BroadcastDecoder.getMarketId(encodedMarketBroadcast),
+      encodedMarketBroadcast
+    );
+  }
 	
 	public static synchronized void removeBroker(String brokerId) {
+
 		brokers.remove(brokerId);
 	}
 	
 	public static synchronized void removeMarket(String marketId) {
+
 		markets.remove(marketId);
 	}
-	
-	public static String[] getAvailableMarkets() {
-		return markets.keySet().toArray(new String[0]);
-	}
-	
-	//Test method TODO remove
-	public static String[] getAvailableBrokers() {
-		return brokers.keySet().toArray(new String[0]);
-	}
+
+	public static synchronized void removeEncodedBroadcast(String encodedBroadcast) {
+
+	  String marketId = BroadcastDecoder.getMarketId(encodedBroadcast);
+	  marketInstruments.remove(marketId);
+  }
+
+  // Do not synchronize here, will result in blocking across app.
+  public static void writeToBroker(String brokerId, String line) {
+
+	  brokers.get(brokerId).writeToSocket(line);
+  }
+
+  public static Scanner getFromBroker(String brokerId) {
+
+	  return brokers.get(brokerId).getFromSocket();
+  }
+
+  // Do not synchronize here, will result in blocking across app.
+  public static void writeToMarket(String marketId, String line) {
+
+	  markets.get(marketId).writeToSocket(line);
+  }
+
+  public static Scanner getFromMarket(String marketId) {
+
+    return markets.get(marketId).getFromSocket();
+  }
+
+	// TODO: Test.
+	// Broker gets notified when a market disconnects.
+	public static void notifyBrokersClosedMarket(String encodedBroadcast) {
+
+	  String marketId = BroadcastDecoder.getMarketId(encodedBroadcast);
+	  String closedMarket = BroadcastEncoder.encode(marketId, null, false);
+
+	  brokers.forEach((brokerId, socketConnectivity) -> {
+
+	    try {
+
+        writeToBroker(brokerId, closedMarket);
+      }
+	    catch (Exception e) {
+	      e.printStackTrace(System.out);
+      }
+    });
+  }
+
+  // TODO: Test.
+  // Broker gets notified when a market connects.
+	public static void notifyBrokersOpenMarket(String encodedBroadcast) {
+
+	  brokers.forEach((brokerId, socketConnectivity) -> {
+
+	    try {
+
+        writeToBroker(brokerId, encodedBroadcast);
+      }
+	    catch (Exception e) {
+	      e.printStackTrace(System.out);
+      }
+    });
+  }
+
+  // TODO: Test.
+  // Broker receives market instruments upon connection to router.
+  public static void notifyBrokerMarketInstruments(String brokerId) {
+
+    try {
+
+      marketInstruments.forEach((marketId, encodedBroadcast) -> {
+        writeToBroker(brokerId, encodedBroadcast);
+      });
+    }
+    catch (Exception e) {
+      e.printStackTrace(System.out);
+    }
+  }
 }

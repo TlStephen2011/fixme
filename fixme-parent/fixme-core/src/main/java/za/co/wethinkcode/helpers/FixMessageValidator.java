@@ -110,8 +110,8 @@ public abstract class FixMessageValidator {
   public static void validateSymbol(String symbol)
     throws FixMessageException {
 
-    if (symbol.length() != 3)
-      throw new FixMessageException("Invalid symbol length, should be 3.");
+    // if (symbol.length() != 3)
+    //   throw new FixMessageException("Invalid symbol length, should be 3.");
   }
 
   public static void validateBuyOrSell(String buyOrSell)
