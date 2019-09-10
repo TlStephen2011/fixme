@@ -3,7 +3,9 @@ package za.co.wethinkcode.market;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import za.co.wethinkcode.ExecutionReportDecoded;
@@ -21,7 +23,8 @@ public class Market {
 	private int PORT = 5001;
 	private Socket connection = null;
 	List<Instrument> instruments = null;
-	
+	Map<String, Instrument> mappedInstruments = new HashMap<String, Instrument>();
+			
 	public Market() throws Exception {
     	connection = new Socket(HOST, PORT);
     	Scanner in = new Scanner(connection.getInputStream());
@@ -31,6 +34,7 @@ public class Market {
     	System.out.println("Market was allocated ID: " + marketId);
     	// Read instruments
     	instruments = InstrumentReader.getInstruments();
+    	mapInstruments();
     	// Broadcast instruments
     	String encodedBroadcast = BroadcastEncoder.encode(marketId, instruments, true);
     	out.println(encodedBroadcast);
@@ -42,17 +46,79 @@ public class Market {
 		// handle message and send back FIX to connection
 		try {
 			SingleOrderDecoded fix = new SingleOrderDecoded(message);
+			FixMessage executionReport = null;			
+			Instrument query = mappedInstruments.get(fix.getSymbol());
 			
-			FixMessage executionReport = new FixMessage(
-					marketId,
-					fix.getSourceID(),
-					"2",
-					fix.getSymbol(),
-					fix.getBuyOrSell(),
-					fix.getOrderAmount(),
-					fix.getOrderAmount(),
-					"42.42"
-			);
+			if (query == null) {
+				executionReport = new FixMessage(
+						marketId,
+						fix.getSourceID(),
+						"8",
+						fix.getSymbol(),
+						fix.getBuyOrSell(),
+						fix.getOrderAmount(),
+						"0",
+						"0"
+				);
+			} else {
+				
+				String buyOrSell = fix.getBuyOrSell();
+				
+				if (buyOrSell.equals("1")) {
+					
+					// Requesting buy
+					
+					int qtyReq = Integer.parseInt(fix.getOrderAmount());
+					
+					if (query.reserveQty < qtyReq) {
+						// Reject
+						executionReport = new FixMessage(
+								marketId,
+								fix.getSourceID(),
+								"8",
+								fix.getSymbol(),
+								fix.getBuyOrSell(),
+								fix.getOrderAmount(),
+								"0",
+								"0"
+						);
+					} else {
+						// Execute
+						executionReport = new FixMessage(
+								marketId,
+								fix.getSourceID(),
+								"2",
+								fix.getSymbol(),
+								fix.getBuyOrSell(),
+								fix.getOrderAmount(),
+								fix.getOrderAmount(),
+								"42.42"
+						);
+						query.reserveQty -= qtyReq;
+					}				
+				} else {
+					// Requesting sell
+					
+					int qtyReq = Integer.parseInt(fix.getOrderAmount());
+					
+					// Always execute
+					
+					executionReport = new FixMessage(
+							marketId,
+							fix.getSourceID(),
+							"2",
+							fix.getSymbol(),
+							fix.getBuyOrSell(),
+							fix.getOrderAmount(),
+							fix.getOrderAmount(),
+							"42.42"
+					);					
+					
+					query.reserveQty += qtyReq;
+				}
+			}
+
+
 			
 			out.println(executionReport);
 			
@@ -65,5 +131,10 @@ public class Market {
 		Scanner in = new Scanner(connection.getInputStream());			
 		return in.nextLine();
 	}
-	
+
+	private void mapInstruments() {
+		for(Instrument i : instruments) {
+			mappedInstruments.put(i.instrument, i);
+		}
+	}
 }
