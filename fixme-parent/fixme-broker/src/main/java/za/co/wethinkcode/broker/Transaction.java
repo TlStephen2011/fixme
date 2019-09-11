@@ -43,7 +43,10 @@ public class Transaction {
 		if (args.length == 4) {
 			t = new Transaction(args[0], args[1], args[2], args[3]);
 		} else {
-			App.flipSwitch();
+		    if (App.isInteractive)
+			    App.flipSwitch();
+//		    else
+//		        Simulation.flipSwitch();
 			throw new InvalidInputException("Transaction message must have 4 fields, for example: \n[marketId] [buyOrSell] [instrument] [orderQTY]");
 		}
 		validateTransaction(t);
@@ -65,7 +68,10 @@ public class Transaction {
 				violationMessages.add(constraintViolation.getPropertyPath() + " : " + constraintViolation.getMessage());
 			}
 			System.out.println(StringUtils.join(violationMessages, "\n"));
-			App.flipSwitch();
+			if (App.isInteractive)
+			    App.flipSwitch();
+//			else
+//			    Simulation.flipSwitch();
 			throw new InvalidInputException("");
 		}
 	}

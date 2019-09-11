@@ -11,6 +11,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class Simulation implements  Runnable{
 
     private Broker broker;
+
+
     private int simulationId;
     private static Transaction transaction;
     private static String transactionString;
@@ -18,17 +20,21 @@ public class Simulation implements  Runnable{
     private static String buyOrSell;
     private static String instrument;
     private static String quantity;
-    private MarketInstruments marketInstruments;
+   // public  static ThreadLocal<Boolean> dataReceived = ThreadLocal.withInitial(() -> false);
+    private volatile boolean localSwitch = false;
+    public  static ThreadLocal<MarketInstruments> marketInstruments;
     private int cycles;
+
 
     public Simulation(int cycles, int id) throws IOException {
         simulationId = id;
         this.cycles = cycles;
         broker = new Broker(id);
-        marketInstruments = new MarketInstruments();
+        broker.sent = cycles;
+        marketInstruments = ThreadLocal.withInitial(()->broker.getMarketInstruments());
     }
 
-    public static void generateTransaction() {
+    public  void generateTransaction() {
 
         marketId = getRandomMarket();
         instrument = getRandomInstrument(marketId);
@@ -50,14 +56,17 @@ public class Simulation implements  Runnable{
         }
     }
 
-    public static String getRandomMarket() {
+    public  String getRandomMarket() {
         //TODO:
-        return "123456";
+        int random = ThreadLocalRandom.current().nextInt(0, broker.getMarketInstruments().getInstruments().size());
+        return broker.getMarketInstruments().getInstruments().keySet().toArray()[random].toString();
     }
 
-    public static String getRandomInstrument(String marketId) {
+    public  String getRandomInstrument(String marketId) {
         // TODO:
-        return "XAU";
+        int random = ThreadLocalRandom.current().nextInt(0, broker.getMarketInstruments().getInstruments().get(marketId).size());
+        System.out.println("T" + simulationId + "  Random " + random);
+        return broker.getMarketInstruments().getInstruments().get(marketId).get(random).instrument;
     }
 
     public static boolean brokerHasInstrument(String instrument) {
@@ -75,41 +84,59 @@ public class Simulation implements  Runnable{
     }
 
 
-    public void awaitBroadCast() {
-        String line;
-        try {
-            Scanner in = new Scanner(broker.getSocket().getInputStream());
-            System.out.println("Thread " + simulationId + ":\nWaiting for Markets to Connect ...\n");
-            while (!in.hasNextLine()) /* Wait for markets to connect */;
-            line = in.nextLine();
-//            marketInstruments.updateMarketInstruments(line);
-//            marketInstruments.printMarketInstruments(simulationId);
-            //while (true);
-        } catch(IOException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
     @Override
     public void run() {
 
-        String response;
-        int i = 0;
 
-        awaitBroadCast();
-        while (i < cycles) {
-            generateTransaction();
-            try {
-                System.out.println("Thread " + simulationId + " Request to Market:\n" + transactionString + "\n");
-                broker.sendMessage(transaction);
-                response = broker.processResponse();
-                System.out.println("Thread " + simulationId + "Response from Market:\n" + response + "\n");
+        Thread thread = new Thread(() -> {
+            while (true) {
 
-            } catch (IOException | NoSuchElementException e) {
-                System.out.println("Thread " + simulationId + " Error:\n" + e.getMessage() + "\n");
+                try {
+
+                    broker.processResponse(simulationId);
+                    if (broker.sentIsReceived()) {
+                        broker.getSocket().close();
+                        System.out.println("DOONNE");
+                        break;
+                    }
+                   // System.out.println("Enter transaction message: ");
+                   // if (!dataReceived.get())
+                    //flipSwitch();
+                   // System.out.println(dataReceived.get());
+                } catch (IOException e) {
+                    System.out.println(e.getMessage());
+                } catch (NoSuchElementException e) {
+                 //   if (!dataReceived.get())
+                    localSwitch = false;
+                        broker.killBroker();
+                }
             }
-            i++;
+        });
+        thread.start();
+
+        //String response;
+
+
+        int i = 0;
+        ///awaitBroadCast();
+        while (i < cycles) {
+            if (broker.getMarketInstruments().getInstruments().size() > 0) {
+               // localSwitch = dataReceived.get();
+                generateTransaction();
+                try {
+                    System.out.println("Thread " + simulationId + " Request to Market:\n" + transactionString + "\n");
+                    broker.sendMessage(transaction);
+                    // response = broker.processResponse();
+                    System.out.println("Thread " + simulationId + " Waiting for Response from Market...");
+                    // System.out.println("Thread " + simulationId + "Response from Market:\n" + response + "\n");
+
+                } catch (IOException | NoSuchElementException e) {
+                    System.out.println("Thread " + simulationId + " Error:\n" + e.getMessage() + "\n");
+                }
+                i++;
+            }
         }
+        System.out.println("CYCLES DONE");
     }
 
 

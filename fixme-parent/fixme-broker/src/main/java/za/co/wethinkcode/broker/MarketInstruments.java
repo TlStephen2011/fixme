@@ -14,9 +14,15 @@ import java.util.Map;
 @Data
 public class MarketInstruments {
 
-    private  Map<String, List<Instrument>> instruments = new HashMap<>();
 
-    public  void updateMarketInstruments(String broadcastMessage) {
+
+    private   Map<String, List<Instrument>> instruments = new HashMap<>();
+
+    public synchronized Map<String, List<Instrument>> getInstruments() {
+        return instruments;
+    }
+
+    public synchronized void updateMarketInstruments(String broadcastMessage) {
         String marketId = BroadcastDecoder.getMarketId(broadcastMessage);
 
         if (BroadcastDecoder.isOpenMarket(broadcastMessage)) {
@@ -25,10 +31,16 @@ public class MarketInstruments {
         else {
             System.out.println("Market " + marketId + " is closed.");
             instruments.remove(marketId);
-            if (!App.dataReceived)
-                App.flipSwitch();
+            if (App.isInteractive) {
+                if (!App.dataReceived)
+                    App.flipSwitch();
+            } else {
+//                if (!Simulation.dataReceived.get())
+//                    Simulation.flipSwitch();
+            }
         }
     }
+
 
     public void printMarketInstruments(int simulationId) {
         instruments.forEach((marketId, instruments) -> {

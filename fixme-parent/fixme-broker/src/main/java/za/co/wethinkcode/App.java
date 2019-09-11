@@ -14,6 +14,8 @@ public class App
 {
     public volatile static boolean dataReceived = false;
     public  static MarketInstruments marketInstruments ;
+    public static boolean isInteractive = false;
+
     public static void main( String[] args ) throws Exception {
         // Assume interactive mode
 
@@ -22,13 +24,14 @@ public class App
             Broker b = new Broker();
 
             marketInstruments = b.getMarketInstruments();
+            isInteractive = true;
             Thread t1 = new Thread(new Runnable() {
 
                 @Override
                 public void run() {
                     while (true) {
                         try {
-                            b.processResponse();
+                            b.processResponse(0);
                             System.out.println("Enter transaction message: ");
                             if (!dataReceived)
                                 flipSwitch();
@@ -36,7 +39,7 @@ public class App
                             System.out.println(e.getMessage());
                         } catch (NoSuchElementException e) {
                             if (!dataReceived)
-                              b.reestablishConnection();
+                              b.killBroker();
                          }
                     }
                 }
@@ -107,14 +110,6 @@ public class App
             System.out.println(e.getMessage());
         }
         return null;
-    }
-
-    private static boolean isSimulationMode(String []args) {
-        if (args.length == 4) {
-
-            return true;
-        }
-        return false;
     }
 
     public synchronized static void flipSwitch() {
