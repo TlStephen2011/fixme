@@ -1,6 +1,7 @@
 package za.co.wethinkcode.broker;
 
 import lombok.Data;
+import za.co.wethinkcode.App;
 import za.co.wethinkcode.ExecutionReportDecoded;
 import za.co.wethinkcode.helpers.BroadcastDecoder;
 import za.co.wethinkcode.helpers.Instrument;
@@ -13,9 +14,15 @@ import java.util.Map;
 @Data
 public class MarketInstruments {
 
-    private  Map<String, List<Instrument>> instruments = new HashMap<>();
 
-    public  void updateMarketInstruments(String broadcastMessage) {
+
+    private   Map<String, List<Instrument>> instruments = new HashMap<>();
+
+    public synchronized Map<String, List<Instrument>> getInstruments() {
+        return instruments;
+    }
+
+    public synchronized void updateMarketInstruments(String broadcastMessage) {
         String marketId = BroadcastDecoder.getMarketId(broadcastMessage);
 
         if (BroadcastDecoder.isOpenMarket(broadcastMessage)) {
@@ -24,19 +31,27 @@ public class MarketInstruments {
         else {
             System.out.println("Market " + marketId + " is closed.");
             instruments.remove(marketId);
+            if (App.isInteractive) {
+                if (!App.dataReceived)
+                    App.flipSwitch();
+            } else {
+//                if (!Simulation.dataReceived.get())
+//                    Simulation.flipSwitch();
+            }
         }
     }
 
-    public void printMarketInstruments(int simulationId) {
-        StringBuilder s = new StringBuilder();
 
+    public void printMarketInstruments(int simulationId) {
         instruments.forEach((marketId, instruments) -> {
+            StringBuilder s = new StringBuilder();
             for (Instrument i : instruments) {
                 s.append(i.instrument).append(", ");
             }
             System.out.println(
                     (simulationId > 0 ? "Thread " + simulationId + " Market Available:\n" : "" ) +
                     "Market " + marketId + " trades " + s.toString().replaceAll(", $", "."));
+
         });
     }
 

@@ -1,5 +1,6 @@
 package za.co.wethinkcode.broker;
 
+import jdk.vm.ci.code.site.Mark;
 import lombok.Data;
 import org.apache.commons.lang3.StringUtils;
 import za.co.wethinkcode.App;
@@ -19,7 +20,7 @@ import java.util.Set;
 @Data
 public class Transaction {
 
-	@MarketId
+	@MarketId()
 	private String marketId;
 	@Pattern(regexp = "buy|sell|BUY|SELL", message = "Must be buy or sell.")
 	private String buyOrSell;
@@ -42,10 +43,13 @@ public class Transaction {
 		if (args.length == 4) {
 			t = new Transaction(args[0], args[1], args[2], args[3]);
 		} else {
-            App.flipSwitch();
+		    if (App.isInteractive)
+			    App.flipSwitch();
+//		    else
+//		        Simulation.flipSwitch();
 			throw new InvalidInputException("Transaction message must have 4 fields, for example: \n[marketId] [buyOrSell] [instrument] [orderQTY]");
 		}
-		//validateTransaction(t);
+		validateTransaction(t);
 		return t;
 	}
 
@@ -64,36 +68,11 @@ public class Transaction {
 				violationMessages.add(constraintViolation.getPropertyPath() + " : " + constraintViolation.getMessage());
 			}
 			System.out.println(StringUtils.join(violationMessages, "\n"));
-			App.flipSwitch();
+			if (App.isInteractive)
+			    App.flipSwitch();
+//			else
+//			    Simulation.flipSwitch();
 			throw new InvalidInputException("");
 		}
 	}
-
-//	private static boolean isValid(String[] args) {
-//		int qty;
-//
-//		if (args.length != 4) {
-//			return false;
-//		}
-//
-//		if (args[0].length() != 6) {
-//			return false;
-//		}
-//
-//		if (!args[1].toLowerCase().equals("buy") && !args[1].toLowerCase().equals("sell")) {
-//			return false;
-//		}
-//
-//		if (args[2].length() == 0) {
-//			return false;
-//		}
-//
-//
-//		try {
-//			qty = Integer.parseInt(args[3]);
-//		} catch (Exception e) {
-//			return false;
-//		}
-//		return true;
-//	}
 }

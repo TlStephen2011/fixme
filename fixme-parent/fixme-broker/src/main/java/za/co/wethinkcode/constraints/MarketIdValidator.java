@@ -1,5 +1,8 @@
 package za.co.wethinkcode.constraints;
 
+import za.co.wethinkcode.App;
+import za.co.wethinkcode.broker.Simulation;
+
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
@@ -39,10 +42,14 @@ public class MarketIdValidator implements ConstraintValidator<MarketId, String> 
         }
 
         private boolean marketExists(String marketId) {
-            if (marketId.equals("123456")) {
-                return true;
+
+            if (App.isInteractive) {
+                if (App.marketInstruments.getInstruments().containsKey(marketId))
+                    return true;
+            } else {
+                if (Simulation.marketInstruments.get().getInstruments().containsKey(marketId))
+                    return true;
             }
             return false;
-
     }
 }

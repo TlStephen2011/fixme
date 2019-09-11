@@ -8,14 +8,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-import za.co.wethinkcode.broker.Broker;
-import za.co.wethinkcode.broker.InvalidInputException;
-import za.co.wethinkcode.broker.Simulation;
-import za.co.wethinkcode.broker.Transaction;
+import za.co.wethinkcode.broker.*;
 
 public class App
 {
-    private volatile static boolean dataReceived = false;
+    public volatile static boolean dataReceived = false;
+    public  static MarketInstruments marketInstruments ;
+    public static boolean isInteractive = false;
 
     public static void main( String[] args ) throws Exception {
         // Assume interactive mode
@@ -23,21 +22,24 @@ public class App
         //Establishes a connection to server
         if (args.length == 1 && args[0].equals("-i")) {
             Broker b = new Broker();
+
+            marketInstruments = b.getMarketInstruments();
+            isInteractive = true;
             Thread t1 = new Thread(new Runnable() {
 
                 @Override
                 public void run() {
-                    String line;
                     while (true) {
                         try {
-                            line = b.processResponse();
+                            b.processResponse(0);
                             System.out.println("Enter transaction message: ");
-                            flipSwitch();
+                            if (!dataReceived)
+                                flipSwitch();
                         } catch (IOException e) {
                             System.out.println(e.getMessage());
                         } catch (NoSuchElementException e) {
                             if (!dataReceived)
-                              b.reestablishConnection();
+                              b.killBroker();
                          }
                     }
                 }
@@ -102,21 +104,12 @@ public class App
     private static String getInput() {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
-//        System.out.println("Enter transaction message: ");
         try {
             return reader.readLine();
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
         return null;
-    }
-
-    private static boolean isSimulationMode(String []args) {
-        if (args.length == 4) {
-
-            return true;
-        }
-        return false;
     }
 
     public synchronized static void flipSwitch() {
