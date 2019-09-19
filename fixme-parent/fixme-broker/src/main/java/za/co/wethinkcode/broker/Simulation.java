@@ -65,7 +65,7 @@ public class Simulation implements  Runnable{
     public  String getRandomInstrument(String marketId) {
         // TODO:
         int random = ThreadLocalRandom.current().nextInt(0, broker.getMarketInstruments().getInstruments().get(marketId).size());
-        System.out.println("T" + simulationId + "  Random " + random);
+        //System.out.println("T" + simulationId + "  Random " + random);
         return broker.getMarketInstruments().getInstruments().get(marketId).get(random).instrument;
     }
 
@@ -96,7 +96,6 @@ public class Simulation implements  Runnable{
                     broker.processResponse(simulationId);
                     if (broker.sentIsReceived()) {
                         broker.getSocket().close();
-                        System.out.println("DOONNE");
                         break;
                     }
                    // System.out.println("Enter transaction message: ");
@@ -136,7 +135,6 @@ public class Simulation implements  Runnable{
                 i++;
             }
         }
-        System.out.println("CYCLES DONE");
     }
 
 
