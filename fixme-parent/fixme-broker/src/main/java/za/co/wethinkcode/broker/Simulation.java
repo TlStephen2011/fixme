@@ -20,9 +20,7 @@ public class Simulation implements  Runnable{
     private static String buyOrSell;
     private static String instrument;
     private static String quantity;
-   // public  static ThreadLocal<Boolean> dataReceived = ThreadLocal.withInitial(() -> false);
-    private volatile boolean localSwitch = false;
-    public  static ThreadLocal<MarketInstruments> marketInstruments;
+
     private int cycles;
 
 
@@ -31,7 +29,7 @@ public class Simulation implements  Runnable{
         this.cycles = cycles;
         broker = new Broker(id);
         broker.sent = cycles;
-        marketInstruments = ThreadLocal.withInitial(()->broker.getMarketInstruments());
+        //marketInstruments = new ThreadLocal<>();//ThreadLocal.withInitial(()->broker.getMarketInstruments());
     }
 
     public  void generateTransaction() {
@@ -65,7 +63,6 @@ public class Simulation implements  Runnable{
     public  String getRandomInstrument(String marketId) {
         // TODO:
         int random = ThreadLocalRandom.current().nextInt(0, broker.getMarketInstruments().getInstruments().get(marketId).size());
-        System.out.println("T" + simulationId + "  Random " + random);
         return broker.getMarketInstruments().getInstruments().get(marketId).get(random).instrument;
     }
 
@@ -89,6 +86,7 @@ public class Simulation implements  Runnable{
 
 
         Thread thread = new Thread(() -> {
+           // marketInstruments = new ThreadLocal<>();
             while (true) {
 
                 try {
@@ -107,27 +105,24 @@ public class Simulation implements  Runnable{
                     System.out.println(e.getMessage());
                 } catch (NoSuchElementException e) {
                  //   if (!dataReceived.get())
-                    localSwitch = false;
+                  //  localSwitch = false;
                         broker.killBroker();
                 }
             }
         });
         thread.start();
 
-        //String response;
-
-
         int i = 0;
-        ///awaitBroadCast();
+
         while (i < cycles) {
+
             if (broker.getMarketInstruments().getInstruments().size() > 0) {
-               // localSwitch = dataReceived.get();
+               // marketInstruments.set(broker.getMarketInstruments());
                 generateTransaction();
                 try {
                     System.out.println("Thread " + simulationId + " Request to Market:\n" + transactionString + "\n");
                     broker.sendMessage(transaction);
-                    // response = broker.processResponse();
-                    System.out.println("Thread " + simulationId + " Waiting for Response from Market...");
+                    System.out.println("Thread " + simulationId + " Waiting for Response from Market...\n");
                     // System.out.println("Thread " + simulationId + "Response from Market:\n" + response + "\n");
 
                 } catch (IOException | NoSuchElementException e) {

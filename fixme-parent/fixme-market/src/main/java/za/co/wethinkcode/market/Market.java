@@ -24,10 +24,11 @@ public class Market {
 	private Socket connection = null;
 	List<Instrument> instruments = null;
 	Map<String, Instrument> mappedInstruments = new HashMap<String, Instrument>();
+	private Scanner in;
 			
 	public Market() throws Exception {
     	connection = new Socket(HOST, PORT);
-    	Scanner in = new Scanner(connection.getInputStream());
+    	in = new Scanner(connection.getInputStream());
     	PrintWriter out = new PrintWriter(connection.getOutputStream(), true);
     	
     	marketId = in.nextLine();
@@ -128,8 +129,9 @@ public class Market {
 	}
 	
 	public String getFixMessage() throws IOException {
-		Scanner in = new Scanner(connection.getInputStream());			
-		return in.nextLine();
+		//Scannein = new Scanner(connection.getInputStream());
+		String line = in.nextLine();
+		return line;
 	}
 
 	private void mapInstruments() {

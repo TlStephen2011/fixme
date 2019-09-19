@@ -16,7 +16,7 @@ public class MarketInstruments {
 
 
 
-    private   Map<String, List<Instrument>> instruments = new HashMap<>();
+    private Map<String, List<Instrument>> instruments = new HashMap<>();
 
     public synchronized Map<String, List<Instrument>> getInstruments() {
         return instruments;

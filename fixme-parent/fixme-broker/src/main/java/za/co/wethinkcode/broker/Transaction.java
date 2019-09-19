@@ -49,7 +49,8 @@ public class Transaction {
 //		        Simulation.flipSwitch();
 			throw new InvalidInputException("Transaction message must have 4 fields, for example: \n[marketId] [buyOrSell] [instrument] [orderQTY]");
 		}
-		validateTransaction(t);
+		if (App.isInteractive)
+		    validateTransaction(t);
 		return t;
 	}
 

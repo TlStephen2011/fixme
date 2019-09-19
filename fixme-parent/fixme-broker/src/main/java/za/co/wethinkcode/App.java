@@ -80,7 +80,7 @@ public class App
                 && args[3].matches("\\d+")) {
             try {
                 int brokers = Integer.parseInt(args[1]);
-                ExecutorService pool = Executors.newFixedThreadPool(brokers);
+                ExecutorService pool = Executors.newFixedThreadPool(20);
                 int i = 0;
 
 

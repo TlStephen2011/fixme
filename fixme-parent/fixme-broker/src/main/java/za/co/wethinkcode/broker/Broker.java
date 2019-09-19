@@ -58,6 +58,7 @@ public class Broker {
             );
             out.println(message.toString());
         }catch (FixMessageException e) {
+           // received++;
             System.out.println(e.getMessage());
         }
     }
@@ -89,6 +90,7 @@ public class Broker {
                 line = fromRouter.nextLine();
             }
             marketInstruments.printMarketInstruments(simulationId);
+
         }
 //        System.out.println("\n------Simulation END " + simulationId + "\n");
     }

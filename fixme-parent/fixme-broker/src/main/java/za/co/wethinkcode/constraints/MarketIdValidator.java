@@ -41,13 +41,10 @@ public class MarketIdValidator implements ConstraintValidator<MarketId, String> 
             return true;
         }
 
-        private boolean marketExists(String marketId) {
+        private  boolean marketExists(String marketId) {
 
             if (App.isInteractive) {
                 if (App.marketInstruments.getInstruments().containsKey(marketId))
-                    return true;
-            } else {
-                if (Simulation.marketInstruments.get().getInstruments().containsKey(marketId))
                     return true;
             }
             return false;
